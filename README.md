@@ -21,8 +21,8 @@ thesis/
 ## Installation
 1. Clone the repository:
 ```sh
-git clone https://github.com/stefsyrsiri/thesis-evaluation.git
-cd thesis-evaluation
+git clone https://github.com/stefsyrsiri/thesis.git
+cd thesis
 ```
 
 2. Install dependencies:
