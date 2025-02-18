@@ -13,8 +13,8 @@ class SummaryEvaluator:
         self.candidate_dir = candidate_dir
         self.data = {
             'source_doc': [],
-            'type': [],
-            'method': [],
+            'eval_type': [],
+            'eval_method': [],
             'variant': [],
             'score': [],
         }
@@ -75,7 +75,7 @@ class SummaryEvaluator:
 
                     # ---------META
                     # NPowER - computed in graph methods
-                    self._append_score(source_file=source_file, type='Graph-based', method='NPowER', candidate_variant=candidate_variant, result=npower_score)
+                    self._append_score(source_file=source_file, type='Meta', method='NPowER', candidate_variant=candidate_variant, result=npower_score)
 
                     # FRESA
 
@@ -102,8 +102,8 @@ class SummaryEvaluator:
 
     def _append_score(self, source_file, type, method, candidate_variant, result):
         self.data['source_doc'].append(source_file)
-        self.data['type'].append(type)
-        self.data['method'].append(method)
+        self.data['eval_type'].append(type)
+        self.data['eval_method'].append(method)
         self.data['variant'].append(candidate_variant)
         self.data['score'].append(result)
 
