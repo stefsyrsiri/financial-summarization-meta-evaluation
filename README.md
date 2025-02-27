@@ -1,4 +1,4 @@
-# Financial Narrative Summarization Evaluation
+# Financial Narrative Summarization Evaluation (In-progress)
 
 ## Overview
 In this project we evaluate automatic summarization evaluation methods on the summaries of Greek annual reports.
