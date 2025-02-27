@@ -1,16 +1,47 @@
+"""
+This module utilizes SummaryDestructor to construct new candidate summaries.
+
+It includes functions to check whether data already exists
+and if it doesn't, it downloads it and unzips it.
+"""
+
+
 import os
 from loguru import logger
 from summary_destructor import SummaryDestructor
 
 
 class SummaryGenerator:
-    def __init__(self, source_docs, gold_dir, candidate_dir):
+    def __init__(
+            self,
+            source_docs: list,
+            gold_dir: str,
+            candidate_dir: str
+            ):
+        """Constructs candidate summaries.
+
+        Args:
+            source_docs (list): The list of annual reports in the analysis.
+            gold_dir (str): The path of the gold summaries.
+            candidate_dir (str): The path of the candidate summaries.
+
+        """
         self.source_docs = source_docs
         self.gold_dir = gold_dir
         self.candidate_dir = candidate_dir
 
-    def generate_noisy_summaries(self, doc_name: str, doc_content: str, destructor: SummaryDestructor):
-        """Generates noisy summaries for a given document."""
+    def generate_noisy_summaries(
+            self,
+            doc_name: str,
+            destructor: SummaryDestructor
+            ):
+        """Generates noisy summaries for a given document.
+
+        Args:
+            doc_name (str): The number of the summary.
+            destructor (SummaryDestructor): An object with summary destructive methods.
+
+        """
         logger.info(f"Generating noisy summaries for {doc_name}...")
 
         try:

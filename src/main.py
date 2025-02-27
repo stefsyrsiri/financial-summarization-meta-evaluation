@@ -1,14 +1,25 @@
+"""
+Main script for running construction of noisy candidate summaries and scoring them.
+
+This script initializes the DataCollector, SummaryDestructor, SummaryGenerator,
+and SummaryEvaluator classes to collect the Greek data, generates new noisy
+summaries based on the Greek data and evaluates them against their original
+version.
+"""
+
 import os
+
 from dotenv import load_dotenv
 from loguru import logger
-from data_handler import DataHandler
+
+from data_collector import DataCollector
 from summary_destructor import SummaryDestructor
 from summary_generator import SummaryGenerator
 from summary_evaluator import SummaryEvaluator
 
+
 # Load from .env
 load_dotenv()
-
 ANNUAL_REPORTS_DIR = os.getenv('ANNUAL_REPORTS_DIR')
 GOLD_SUMMARIES_DIR = os.getenv('GOLD_SUMMARIES_DIR')
 CANDIDATE_SUMMARIES_DIR = os.getenv('CANDIDATE_SUMMARIES_DIR')
@@ -22,10 +33,10 @@ def main():
     logger.info('Starting the main process.')
 
     # Collect data for destruction and evaluation
-    data_handler = DataHandler()
+    data_collector = DataCollector()
     logger.info('Collecting data.')
     try:
-        data_handler.collect_data()
+        data_collector.collect_data()
         logger.info('Successfully collected Greek data.')
     except Exception as e:
         logger.error(f'Failed data collection: {e}')
