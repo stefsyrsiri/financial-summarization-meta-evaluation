@@ -49,7 +49,7 @@ class SummaryGenerator:
             noisy_summaries = {
                 f'randomly_swapped_words_{noise_percentage}': destructor.random_swap_words(summary_perc=noise_percentage),
                 f'consecutively_swapped_words_{noise_percentage}': destructor.consecutive_swap_words(summary_perc=noise_percentage),
-                f'deleted_words_{noise_percentage}': destructor.remove_words(summary_perc=0.5),
+                f'deleted_words_{noise_percentage}': destructor.remove_words(summary_perc=noise_percentage),
                 f'removed_sentence_{noise_percentage}': destructor.remove_sentence(summary_perc=noise_percentage),
                 f'inserted_sentence_{noise_percentage}': destructor.insert_sentence(target=doc_name, source_docs=self.source_docs, gold_dir=self.gold_dir, summary_perc=noise_percentage),
                 f'repeated_sentence_{noise_percentage}': destructor.repeat_sentence(summary_perc=noise_percentage)
