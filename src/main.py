@@ -43,7 +43,7 @@ def main():
         return
 
     # Subset of the source documents
-    source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)[:10]]
+    source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]
     logger.info(f"Loaded {len(source_docs)} annual reports for noisy summary generation.")
     logger.info(f"Loaded {source_docs}.")
 
@@ -60,7 +60,9 @@ def main():
             destructor = SummaryDestructor(input_summary=gold_summary)
 
             # Summary Generation
-            summary_generator.generate_noisy_summaries(doc_name=doc, doc_content=gold_summary, destructor=destructor)
+            percentages = [0.1, 0.3, 0.5, 0.7, 0.9]
+            for percentage in percentages:
+                summary_generator.generate_noisy_summaries(doc_name=doc, destructor=destructor, noise_percentage=percentage)
         except Exception as e:
             logger.error(f"Failed processing for gold summary {doc}: {e}")
 

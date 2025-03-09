@@ -1,7 +1,7 @@
 """
 This module provides tools that destroy summaries by:
 
-- shuffling their words
+- swapping their words
 - removing words
 - removing sentences
 - inserting sentences from other summaries (from the same dataset)
@@ -11,12 +11,19 @@ This module provides tools that destroy summaries by:
 
 import os
 from loguru import logger
-from random import choice, sample, shuffle
+import spacy
+from random import choice, choices, sample
 from typing import Optional
+
+nlp = spacy.load('el_core_news_sm')
+nlp.add_pipe('sentencizer', before='parser')
 
 
 class SummaryDestructor:
-    def __init__(self, input_summary: str):
+    def __init__(
+            self,
+            input_summary: str,
+            ):
         """Makes summaries noisy.
 
         Args:
@@ -26,30 +33,21 @@ class SummaryDestructor:
         self.input_summary = input_summary
         logger.info("SummaryDestructor initialized.")
 
-    def shuffle_words(self) -> str:
-        """Shuffles the summary's words.
-
-        Returns:
-            str: The shuffled summary.
-
-        """
-        split_summary = self.input_summary.split()
-        shuffle(split_summary)
-        return ' '.join(split_summary)
-
-    def swap_words(
+    # Helper for the random_swap and consecutive_swap methods
+    def _get_swap_indices(
             self,
-            n_swaps: Optional[int],
-            summary_perc: Optional[float]
-            ) -> str:
-        """Swaps words from the summary n_swap times.
+            n_swaps: Optional[int] = None,
+            summary_perc: Optional[float] = None
+            ):
+        """Helper method for the random_swap_words and consecutive_swap_words methods.
+           Prepares the summary indices and target number used for swapping.
 
         Args:
             n_swaps (Optional[int]): The number of swaps to occur.
             summary_perc (Optional[float]): The percentage of the summary to be modified.
 
         Returns:
-            str: The summary with the swapped words.
+            The summary indices and the target number used for sampling summary indices.
 
         """
         split_summary = self.input_summary.split()
@@ -65,19 +63,38 @@ class SummaryDestructor:
             if n_swaps < 1 or n_words2swap > summary_len:
                 raise ValueError('n_swaps must be a positive integer and the number of words'
                                  'resulting from the n_swaps (n_swaps*2) must be less than the summary length.')
-        else:
             target_number = n_words2swap
 
-        if summary_perc is not None:
+        elif summary_perc is not None:
             if not isinstance(summary_perc, float):
                 raise TypeError('summary_perc must be a float.')
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
-        else:
             target_number = (int(summary_len * summary_perc) // 2) * 2
 
         # Get the indices of all the words
         summary_indices = [index for index in range(summary_len-1)]
+        return summary_indices, target_number
+
+    def random_swap_words(
+            self,
+            n_swaps: Optional[int] = None,
+            summary_perc: Optional[float] = None
+            ) -> str:
+        """Swaps words from the summary n_swap times.
+
+        Args:
+            n_swaps (Optional[int]): The number of swaps to occur.
+            summary_perc (Optional[float]): The percentage of the summary to be modified.
+
+        Returns:
+            str: The summary with the swapped words.
+
+        """
+        split_summary = self.input_summary.split()
+
+        # Get summary indices and target number for swapping
+        summary_indices, target_number = self._get_swap_indices(n_swaps, summary_perc)
 
         # Sample n_words2swap number of words indices
         word_indices = sample(summary_indices, k=target_number)
@@ -92,6 +109,39 @@ class SummaryDestructor:
             split_summary[word_indices[index1]], split_summary[word_indices[index2]] = split_summary[word_indices[index2]], split_summary[word_indices[index1]]
             index1 += 2
             index2 += 2
+        return ' '.join(split_summary)
+
+    def consecutive_swap_words(
+            self,
+            n_swaps: Optional[int] = None,
+            summary_perc: Optional[float] = None
+    ) -> str:
+        """Consecutively swaps words from the summary n_swap times.
+
+        Args:
+            n_swaps (Optional[int]): The number of swaps to occur.
+            summary_perc (Optional[float]): The percentage of the summary to be modified.
+
+        Returns:
+            str: The summary with the swapped words.
+
+        """
+        split_summary = self.input_summary.split()
+
+        # Get summary indices and target number for swapping
+        summary_indices, target_number = self._get_swap_indices(n_swaps, summary_perc)
+
+        # Sample n_swaps number of words indices
+        word_indices = sample(summary_indices[:-1], k=target_number)
+
+        # Sort them so that swaps will be in sequential pairs of two
+        word_indices.sort()
+
+        # Swap the words and slide indices from left to the right
+        for index in word_indices:
+            if index < len(word_indices)-1:
+                split_summary[word_indices[index]], split_summary[word_indices[index + 1]] = split_summary[word_indices[index + 1]], split_summary[word_indices[index]]
+
         return ' '.join(split_summary)
 
     def remove_words(
@@ -120,7 +170,6 @@ class SummaryDestructor:
                 raise TypeError('n_words must be an integer.')
             if not (0 < n_words < summary_len):
                 raise ValueError('n_words must be a positive integer.')
-        else:
             target_number = n_words
 
         if summary_perc is not None:
@@ -128,11 +177,10 @@ class SummaryDestructor:
                 raise TypeError('summary_perc must be a float.')
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
-        else:
             target_number = int(summary_len * summary_perc)
 
         for _ in range(target_number):
-            random_words = choice(split_summary, k=target_number)
+            random_words = choice(split_summary)
             split_summary.remove(random_words)
         return ' '.join(split_summary)
 
@@ -151,7 +199,8 @@ class SummaryDestructor:
             str: The summary after the removal of the sentence.
 
         """
-        sentences = self.input_summary.split('.')
+        doc = nlp(self.input_summary)
+        sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
 
         if (n_sentences is None and summary_perc is None) or (n_sentences is not None and summary_perc is not None):
@@ -162,7 +211,6 @@ class SummaryDestructor:
                 raise TypeError('n_sentences must be an integer.')
             if not (0 < n_sentences < summary_len):
                 raise ValueError('n_sentences must be a positive integer and less in size than the length of the summary.')
-        else:
             target_number = n_sentences
 
         if summary_perc is not None:
@@ -170,11 +218,10 @@ class SummaryDestructor:
                 raise TypeError('summary_perc must be a float.')
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
-        else:
             target_number = int(summary_len * summary_perc)
 
         # Remove sentences
-        sents_remove = choice(sentences, k=target_number)
+        sents_remove = choices(sentences, k=target_number)
         new_text = [sent for sent in sentences if sent not in sents_remove]
         return ''.join(new_text)
 
@@ -199,7 +246,8 @@ class SummaryDestructor:
             str: The summary with the new inserted sentence.
 
         """
-        sentences = self.input_summary.split('.')
+        doc = nlp(self.input_summary)
+        sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
 
         # Choose another summary
@@ -209,7 +257,8 @@ class SummaryDestructor:
         # Choose a sentence from the randomly picked summary to insert to the original one
         with open(os.path.join(gold_dir, f'{rand_summary}_1.txt'), mode='r', encoding='utf-8') as file:
             rand_gold_summary = file.read()
-            rand_sentences = rand_gold_summary.split('.')
+            rand_doc = nlp(rand_gold_summary)
+            rand_sentences = [sent.text.strip() for sent in rand_doc.sents]
             rand_sentence_len = len(rand_sentences)
 
             if (n_sentences is None and summary_perc is None) or (n_sentences is not None and summary_perc is not None):
@@ -220,7 +269,6 @@ class SummaryDestructor:
                     raise TypeError('n_sentences must be an integer.')
                 if not (0 < n_sentences < rand_sentence_len):
                     raise ValueError('n_sentences must be a positive integer and less in size than the length of the random summary.')
-            else:
                 target_number = n_sentences
 
             if summary_perc is not None:
@@ -228,11 +276,10 @@ class SummaryDestructor:
                     raise TypeError('summary_perc must be a float.')
                 if not (0 < summary_perc < 1):
                     raise ValueError('summary_perc must be positive and less than 1.')
-            else:
                 target_number = int(summary_len * summary_perc)
 
             # Insert new sentences
-            sents_insert = choice(sentences, k=target_number)
+            sents_insert = choices(sentences, k=target_number)
             original_text = ''.join([sent for sent in sentences])
             new_text = ''.join(sents_insert)
             return original_text + new_text
@@ -252,7 +299,8 @@ class SummaryDestructor:
             str: The summary with the repeated sentences.
 
         """
-        sentences = self.input_summary.split('.')
+        doc = nlp(self.input_summary)
+        sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
 
         if (n_repeats is None and summary_perc is None) or (n_repeats is not None and summary_perc is not None):
@@ -263,7 +311,6 @@ class SummaryDestructor:
                 raise TypeError('n_repeats must be an integer.')
             if n_repeats < 1:
                 raise ValueError('n_repeats must be a positive integer.')
-        else:
             target_number = n_repeats
 
         if summary_perc is not None:
@@ -271,10 +318,9 @@ class SummaryDestructor:
                 raise TypeError('summary_perc must be a float.')
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
-        else:
             target_number = int(summary_len * summary_perc)
 
-        sents_repeat = choice(sentences, k=target_number)
+        sents_repeat = choice(sentences)
         original_text = ''.join([sent for sent in sentences])
-        new_text = ''.join([sents_repeat] * n_repeats)
+        new_text = ''.join([sents_repeat] * target_number)
         return original_text + new_text

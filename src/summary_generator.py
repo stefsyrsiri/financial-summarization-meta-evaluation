@@ -33,7 +33,8 @@ class SummaryGenerator:
     def generate_noisy_summaries(
             self,
             doc_name: str,
-            destructor: SummaryDestructor
+            destructor: SummaryDestructor,
+            noise_percentage: float
             ):
         """Generates noisy summaries for a given document.
 
@@ -46,11 +47,12 @@ class SummaryGenerator:
 
         try:
             noisy_summaries = {
-                'shuffled_words': destructor.shuffle_words(),
-                'deleted_words': destructor.remove_words(n_words=10),
-                'removed_sentence': destructor.remove_sentence(),
-                'inserted_sentence': destructor.insert_sentence(target=doc_name, source_docs=self.source_docs, gold_dir=self.gold_dir),
-                'repeated_sentence': destructor.repeat_sentence(n_repeats=10)
+                f'randomly_swapped_words_{noise_percentage}': destructor.random_swap_words(summary_perc=noise_percentage),
+                f'consecutively_swapped_words_{noise_percentage}': destructor.consecutive_swap_words(summary_perc=noise_percentage),
+                f'deleted_words_{noise_percentage}': destructor.remove_words(summary_perc=0.5),
+                f'removed_sentence_{noise_percentage}': destructor.remove_sentence(summary_perc=noise_percentage),
+                f'inserted_sentence_{noise_percentage}': destructor.insert_sentence(target=doc_name, source_docs=self.source_docs, gold_dir=self.gold_dir, summary_perc=noise_percentage),
+                f'repeated_sentence_{noise_percentage}': destructor.repeat_sentence(summary_perc=noise_percentage)
             }
 
             for summary_type, summary_content in noisy_summaries.items():

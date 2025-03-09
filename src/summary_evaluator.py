@@ -20,7 +20,7 @@ class SummaryEvaluator:
         }
         self.rouge1 = RougeScorer(['rouge1'], use_stemmer=True)
         self.rouge2 = RougeScorer(['rouge2'], use_stemmer=True)
-        self.bert_scorer = BERTScorer(lang='Greek')  # bert-base-greek-uncased-v1 results in a key error
+        self.bert_scorer = BERTScorer(lang='el')
         logger.info("SummaryEvaluator initialized.")
 
     def evaluate_summaries(self, source_docs):
