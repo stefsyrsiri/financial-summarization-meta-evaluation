@@ -2,3 +2,4 @@
 /logs
 /__MACOSX
 /data
+/src/sentence_splitter.py

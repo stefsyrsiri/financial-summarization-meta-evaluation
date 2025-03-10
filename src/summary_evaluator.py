@@ -36,6 +36,7 @@ class SummaryEvaluator:
             candidate_summaries.insert(0, source_file)
 
             for candidate_file in candidate_summaries:
+                logger.info(f"Evaluating candidate summary: {candidate_file}")
                 # Source
                 if candidate_file == source_file:
                     candidate_path = os.path.join(self.gold_dir, f'{candidate_file}_1.txt')
