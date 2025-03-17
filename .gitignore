@@ -3,3 +3,4 @@
 /__MACOSX
 /data
 /src/sentence_splitter.py
+/src/__pycache__
