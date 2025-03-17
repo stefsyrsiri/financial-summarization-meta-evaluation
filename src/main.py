@@ -26,7 +26,7 @@ CANDIDATE_SUMMARIES_DIR = os.getenv('CANDIDATE_SUMMARIES_DIR')
 RESULTS_PATH = os.getenv('RESULTS_PATH')
 
 # Configure logger
-logger.add('logs/main_{time}.log', rotation='1 day', retention='7 days', compression='zip')
+logger.add('logs/main_{time}.log', rotation='1 day', compression='zip')
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
         return
 
     # Subset of the source documents
-    source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]
+    source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)][:10]
     logger.info(f"Loaded {len(source_docs)} annual reports for noisy summary generation.")
     logger.info(f"Loaded {source_docs}.")
 

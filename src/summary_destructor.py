@@ -52,6 +52,7 @@ class SummaryDestructor:
         """
         split_summary = self.input_summary.split()
         summary_len = len(split_summary)
+        logger.debug(f"Total words: {summary_len}")
 
         if (n_swaps is None and summary_perc is None) or (n_swaps is not None and summary_perc is not None):
             raise ValueError('You must specify exactly one of n_swaps or summary_perc.')
@@ -71,6 +72,7 @@ class SummaryDestructor:
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
             target_number = (int(summary_len * summary_perc) // 2) * 2
+        logger.debug(f"Number of words to be swapped: {target_number}")
 
         # Get the indices of all the words
         summary_indices = [index for index in range(summary_len-1)]
@@ -98,15 +100,16 @@ class SummaryDestructor:
 
         # Sample n_words2swap number of words indices
         word_indices = sample(summary_indices, k=target_number)
+        logger.debug(f"Indices to be swapped: {word_indices}")
 
-        # Sort them so that swaps will be in sequential pairs of two
-        word_indices.sort()
+        # Swap the words and slide indices from left to the right
         word_indices_len = len(word_indices)
         index1, index2 = 0, 1
 
-        # Swap the words and slide indices from left to the right
         while index2 <= word_indices_len:
             split_summary[word_indices[index1]], split_summary[word_indices[index2]] = split_summary[word_indices[index2]], split_summary[word_indices[index1]]
+            logger.debug(f"Indices: {word_indices[index1]}, {word_indices[index2]} = {word_indices[index2]}, {word_indices[index1]}")
+            logger.debug(f"Words: {split_summary[word_indices[index1]]}, {split_summary[word_indices[index2]]} = {split_summary[word_indices[index2]]}, {split_summary[word_indices[index1]]}")
             index1 += 2
             index2 += 2
         return ' '.join(split_summary)
@@ -133,15 +136,14 @@ class SummaryDestructor:
 
         # Sample n_swaps number of words indices
         word_indices = sample(summary_indices[:-1], k=target_number)
-
-        # Sort them so that swaps will be in sequential pairs of two
-        word_indices.sort()
+        logger.debug(f"Indices to be swapped: {word_indices}")
 
         # Swap the words and slide indices from left to the right
         for index in word_indices:
             if index < len(word_indices)-1:
                 split_summary[word_indices[index]], split_summary[word_indices[index + 1]] = split_summary[word_indices[index + 1]], split_summary[word_indices[index]]
-
+                logger.debug(f"Indices: {word_indices[index]}, {word_indices[index + 1]} = {word_indices[index + 1]}, {word_indices[index]}")
+                logger.debug(f"Words: {split_summary[word_indices[index]]}, {split_summary[word_indices[index + 1]]} = {split_summary[word_indices[index + 1]]}, {split_summary[word_indices[index]]}")
         return ' '.join(split_summary)
 
     def remove_words(
@@ -161,6 +163,7 @@ class SummaryDestructor:
         """
         split_summary = self.input_summary.split()
         summary_len = len(split_summary)
+        logger.debug(f"Total words: {summary_len}")
 
         if (n_words is None and summary_perc is None) or (n_words is not None and summary_perc is not None):
             raise ValueError('You must specify exactly one of n_words or summary_perc.')
@@ -178,10 +181,13 @@ class SummaryDestructor:
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
             target_number = int(summary_len * summary_perc)
+        logger.debug(f"Number of words to be removed: {target_number}")
 
+        logger.debug("Words removed:")
         for _ in range(target_number):
-            random_words = choice(split_summary)
-            split_summary.remove(random_words)
+            random_word = choice(split_summary)
+            logger.debug(f"{_}: {random_word}")
+            split_summary.remove(random_word)
         return ' '.join(split_summary)
 
     def remove_sentence(
@@ -202,6 +208,7 @@ class SummaryDestructor:
         doc = nlp(self.input_summary)
         sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
+        logger.debug(f"Total sentences: {summary_len}")
 
         if (n_sentences is None and summary_perc is None) or (n_sentences is not None and summary_perc is not None):
             raise ValueError('You must specify exactly one of n_words or summary_perc.')
@@ -219,9 +226,13 @@ class SummaryDestructor:
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
             target_number = int(summary_len * summary_perc)
+        logger.debug(f"Number of sentences to be removed: {target_number}")
 
         # Remove sentences
         sents_remove = choices(sentences, k=target_number)
+        logger.debug("Sentences to be removed:")
+        for i, sent in enumerate(sents_remove):
+            logger.debug(f"{i}:\n{sent}\n")
         new_text = [sent for sent in sentences if sent not in sents_remove]
         return ''.join(new_text)
 
@@ -249,10 +260,12 @@ class SummaryDestructor:
         doc = nlp(self.input_summary)
         sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
+        logger.debug(f"Total sentences: {summary_len}")
 
         # Choose another summary
         remaining_summaries = [doc for doc in source_docs if doc != target]
         rand_summary = choice(remaining_summaries)
+        logger.debug(f"Random summary: {rand_summary}")
 
         # Choose a sentence from the randomly picked summary to insert to the original one
         with open(os.path.join(gold_dir, f'{rand_summary}_1.txt'), mode='r', encoding='utf-8') as file:
@@ -260,6 +273,7 @@ class SummaryDestructor:
             rand_doc = nlp(rand_gold_summary)
             rand_sentences = [sent.text.strip() for sent in rand_doc.sents]
             rand_sentence_len = len(rand_sentences)
+            logger.debug(f"Random summary sentences: {rand_sentence_len}")
 
             if (n_sentences is None and summary_perc is None) or (n_sentences is not None and summary_perc is not None):
                 raise ValueError('You must specify exactly one of n_sentences or summary_perc.')
@@ -277,12 +291,16 @@ class SummaryDestructor:
                 if not (0 < summary_perc < 1):
                     raise ValueError('summary_perc must be positive and less than 1.')
                 target_number = int(summary_len * summary_perc)
+            logger.debug(f"Number of sentences to insert: {target_number}")
 
             # Insert new sentences
             sents_insert = choices(sentences, k=target_number)
+            logger.debug("Sentences to be inserted:")
+            for i, sent in enumerate(sents_insert):
+                logger.debug(f"{i}:\n{sent}\n")
             original_text = ''.join([sent for sent in sentences])
             new_text = ''.join(sents_insert)
-            return original_text + new_text
+            return new_text + original_text
 
     def repeat_sentence(
             self,
@@ -302,6 +320,7 @@ class SummaryDestructor:
         doc = nlp(self.input_summary)
         sentences = [sent.text.strip() for sent in doc.sents]
         summary_len = len(sentences)
+        logger.debug(f"Total sentences: {summary_len}")
 
         if (n_repeats is None and summary_perc is None) or (n_repeats is not None and summary_perc is not None):
             raise ValueError('You must specify exactly one of n_repeats or summary_perc.')
@@ -319,8 +338,10 @@ class SummaryDestructor:
             if not (0 < summary_perc < 1):
                 raise ValueError('summary_perc must be positive and less than 1.')
             target_number = int(summary_len * summary_perc)
+        logger.debug(f"Number of times to repeat: {target_number}")
 
-        sents_repeat = choice(sentences)
+        sent_repeat = choice(sentences)
+        logger.debug(f"Sentence to be repeated: {sent_repeat}")
         original_text = ''.join([sent for sent in sentences])
-        new_text = ''.join([sents_repeat] * target_number)
-        return original_text + new_text
+        new_text = ''.join([sent_repeat] * target_number)
+        return new_text + original_text
