@@ -32,35 +32,35 @@ class SummaryGenerator:
 
     def generate_noisy_summaries(
             self,
-            doc_name: str,
+            doc_id: str,
             destructor: SummaryDestructor,
             noise_percentage: float
             ):
         """Generates noisy summaries for a given document.
 
         Args:
-            doc_name (str): The number of the summary.
+            doc_id (str): The number of the summary.
             destructor (SummaryDestructor): An object with summary destructive methods.
 
         """
-        logger.info(f"Generating noisy summaries for {doc_name}...")
+        logger.info(f"Generating noisy summaries for {doc_id}...")
 
         try:
             noisy_summaries = {
-                f'randomly_swapped_words_{noise_percentage}': destructor.random_swap_words(summary_perc=noise_percentage),
-                f'consecutively_swapped_words_{noise_percentage}': destructor.consecutive_swap_words(summary_perc=noise_percentage),
-                f'deleted_words_{noise_percentage}': destructor.remove_words(summary_perc=noise_percentage),
-                f'removed_sentence_{noise_percentage}': destructor.remove_sentence(summary_perc=noise_percentage),
-                f'inserted_sentence_{noise_percentage}': destructor.insert_sentence(target=doc_name, source_docs=self.source_docs, gold_dir=self.gold_dir, summary_perc=noise_percentage),
-                f'repeated_sentence_{noise_percentage}': destructor.repeat_sentence(summary_perc=noise_percentage)
+                f'randomly_swapped_words_{noise_percentage}': destructor.random_swap_words(),
+                f'consecutively_swapped_words_{noise_percentage}': destructor.consecutive_swap_words(),
+                f'deleted_words_{noise_percentage}': destructor.remove_words(),
+                f'removed_sentence_{noise_percentage}': destructor.remove_sentence(),
+                f'inserted_sentence_{noise_percentage}': destructor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
+                f'repeated_sentence_{noise_percentage}': destructor.repeat_sentence()
             }
 
             for summary_type, summary_content in noisy_summaries.items():
-                file_path = os.path.join(self.candidate_dir, f"{doc_name}_{summary_type}.txt")
+                file_path = os.path.join(self.candidate_dir, f"{doc_id}_{summary_type}.txt")
                 with open(file_path, mode='w', encoding='utf-8') as file:
                     file.write(summary_content)
-                logger.info(f"Saved {summary_type} summary for {doc_name} to {file_path}.")
+                logger.info(f"Saved {summary_type} summary for {doc_id} to {file_path}.")
 
         except Exception as e:
-            logger.error(f"Failed to generate noisy summaries for {doc_name}: {e}")
+            logger.error(f"Failed to generate noisy summaries for {doc_id}: {e}")
             raise

@@ -62,7 +62,7 @@ def main():
             # Summary Generation
             percentages = [0.1, 0.3, 0.5, 0.7, 0.9]
             for percentage in percentages:
-                summary_generator.generate_noisy_summaries(doc_name=doc, destructor=destructor, noise_percentage=percentage)
+                summary_generator.generate_noisy_summaries(doc_id=doc, destructor=destructor, noise_percentage=percentage)
         except Exception as e:
             logger.error(f"Failed processing for gold summary {doc}: {e}")
 
