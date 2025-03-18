@@ -11,6 +11,7 @@ import os
 
 from dotenv import load_dotenv
 from loguru import logger
+import numpy as np
 
 from data_collector import DataCollector
 from summary_destructor import SummaryDestructor
@@ -57,11 +58,12 @@ def main():
                 gold_summary = file.read()
 
             # Summary Destruction
-            destructor = SummaryDestructor(input_summary=gold_summary)
+            destructor = SummaryDestructor(input_summary=gold_summary, noise_percentage=0.9)
 
             # Summary Generation
-            percentages = [0.1, 0.3, 0.5, 0.7, 0.9]
+            percentages = np.round(np.linspace(0.9, 0.1, num=5), 1).tolist()
             for percentage in percentages:
+                destructor.noise_percentage = percentage
                 summary_generator.generate_noisy_summaries(doc_id=doc, destructor=destructor, noise_percentage=percentage)
         except Exception as e:
             logger.error(f"Failed processing for gold summary {doc}: {e}")

@@ -34,10 +34,19 @@ class SummaryDestructor:
         if not (0 < noise_percentage < 1):
             raise ValueError('summary_perc must be positive and less than 1.')
         self.input_summary = input_summary
-        self.noise_percentage = noise_percentage
+        self._noise_percentage = noise_percentage
         self._word_sample_space = [index for index in range(len(self.input_summary.split()) - 1)]
         self._sentence_sample_space = [sent.text.strip() for sent in nlp(self.input_summary).sents]
         logger.info(f"SummaryDestructor initialized with {self.noise_percentage:.0%} noise.")
+
+    @property
+    def noise_percentage(self):
+        return self._noise_percentage
+
+    @noise_percentage.setter
+    def noise_percentage(self, new_percentage: float):
+        if isinstance(new_percentage, float) and 0 < new_percentage < 1:
+            self._noise_percentage = new_percentage
 
     @property
     def word_sample_space(self):
