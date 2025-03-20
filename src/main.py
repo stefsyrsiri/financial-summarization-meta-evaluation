@@ -27,7 +27,7 @@ CANDIDATE_SUMMARIES_DIR = os.getenv('CANDIDATE_SUMMARIES_DIR')
 RESULTS_PATH = os.getenv('RESULTS_PATH')
 
 # Configure logger
-logger.add('logs/main_{time}.log', rotation='1 day', compression='zip')
+logger.add('logs/main_{time}.log', rotation='1 day', compression='zip', level='DEBUG')
 
 
 def main():
