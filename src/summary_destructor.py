@@ -23,7 +23,7 @@ class SummaryDestructor:
             self,
             input_summary: str,
             noise_percentage: float
-            ): 
+            ):
         """Makes summaries noisy.
 
         Args:
