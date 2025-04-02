@@ -8,14 +8,14 @@ This module provides tools that destroy summaries by:
 - repeating sentences
 """
 
-
+import math
 import os
 from loguru import logger
 import spacy
 from random import choice, sample  # sampling without replacement
 
 nlp = spacy.load('el_core_news_sm')
-nlp.add_pipe('sentencizer', before='parser')
+# nlp.add_pipe('sentencizer', before='parser')
 
 
 class SummaryDestructor:
@@ -35,7 +35,7 @@ class SummaryDestructor:
             raise ValueError('summary_perc must be positive and less than 1.')
         self.input_summary = input_summary
         self.words = self.input_summary.split()
-        self.word_indices = [index for index in range(len(self.word) - 1)]
+        self.word_indices = [index for index in range(len(self.words) - 1)]
         self.sentences = [sent.text.strip() for sent in nlp(self.input_summary).sents]
         self._noise_percentage = noise_percentage
         self._random_swap_word_indices = None
@@ -133,7 +133,7 @@ class SummaryDestructor:
         summary_len = len(self.words)
         logger.debug(f"Total words: {summary_len}")
 
-        target_number = int(summary_len * self.noise_percentage) // 2
+        target_number = math.ceil(summary_len * self.noise_percentage) // 2
         logger.debug(f"Number of swaps: {target_number}")
         return target_number
 
@@ -144,7 +144,7 @@ class SummaryDestructor:
             str: The summary with the swapped words.
 
         """
-        split_summary = self.words
+        split_summary = self.words.copy()
         # Get summary indices and target number for swapping
         target_number = self._get_swap_indices()
 
@@ -162,7 +162,7 @@ class SummaryDestructor:
         index1, index2 = 0, 1
 
         try:
-            while index2 <= word_indices_len:
+            while index2 < word_indices_len:
                 logger.debug(f"Indices: {word_indices[index1]}, {word_indices[index2]} = {word_indices[index2]}, {word_indices[index1]}")
                 logger.debug(f"Words: {split_summary[word_indices[index1]]}, {split_summary[word_indices[index2]]} = {split_summary[word_indices[index2]]}, {split_summary[word_indices[index1]]}")
                 split_summary[word_indices[index1]], split_summary[word_indices[index2]] = split_summary[word_indices[index2]], split_summary[word_indices[index1]]
@@ -179,7 +179,7 @@ class SummaryDestructor:
             str: The summary with the swapped words.
 
         """
-        split_summary = self.words
+        split_summary = self.words.copy()
 
         # Get summary indices and target number for swapping
         target_number = self._get_swap_indices()
@@ -213,11 +213,11 @@ class SummaryDestructor:
             str: The summary with the deleted words.
 
         """
-        split_summary = self.words
+        split_summary = self.words.copy()
         summary_len = len(split_summary)
         logger.debug(f"Total words: {summary_len}")
 
-        target_number = int(summary_len * self.noise_percentage)
+        target_number = math.ceil(summary_len * self.noise_percentage)
         logger.debug(f"Number of words to be removed: {target_number}")
 
         logger.debug("Words removed:")
@@ -241,7 +241,7 @@ class SummaryDestructor:
         summary_len = len(self.sentences)
         logger.debug(f"Total sentences: {summary_len}")
 
-        target_number = int(summary_len * self.noise_percentage)
+        target_number = math.ceil(summary_len * self.noise_percentage)
         logger.debug(f"Number of sentences to be removed: {target_number}")
 
         # Remove sentences
@@ -292,7 +292,7 @@ class SummaryDestructor:
             rand_sentence_len = len(rand_sentences)
             logger.debug(f"Random summary sentences: {rand_sentence_len}")
 
-            target_number = int(summary_len * self.noise_percentage)
+            target_number = math.ceil(summary_len * self.noise_percentage)
             logger.debug(f"Number of sentences to insert: {target_number}")
 
             # Insert new sentences
@@ -318,12 +318,12 @@ class SummaryDestructor:
         summary_len = len(self.sentences)
         logger.debug(f"Total sentences: {summary_len}")
 
-        target_number = int(summary_len * self.noise_percentage)
+        target_number = math.ceil(summary_len * self.noise_percentage)
         logger.debug(f"Number of times to repeat: {target_number}")
 
         if self.repeated_sentence is None:
-            self.repeat_sentence = choice(self.sentences)
-        logger.debug(f"Sentence to be repeated: {self.repeat_sentence}")
+            self.repeated_sentence = choice(self.sentences)
+        logger.debug(f"Sentence to be repeated: {self.repeated_sentence}")
         original_text = ''.join([sent for sent in self.sentences])
-        new_text = ''.join([self.repeat_sentence] * target_number)
+        new_text = ''.join([self.repeated_sentence] * target_number)
         return new_text + original_text

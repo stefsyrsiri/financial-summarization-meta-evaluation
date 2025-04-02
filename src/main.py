@@ -28,6 +28,7 @@ RESULTS_PATH = os.getenv('RESULTS_PATH')
 
 # Configure logger
 logger.add('logs/main_{time}.log', rotation='1 day', compression='zip', level='DEBUG')
+logger.add('logs/errors_{time}.log', rotation='1 day', compression='zip', level='ERROR', filter=lambda record: record["level"].name == "ERROR")
 
 
 def main():
