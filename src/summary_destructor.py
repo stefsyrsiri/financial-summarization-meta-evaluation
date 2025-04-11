@@ -297,8 +297,12 @@ class SummaryDestructor:
 
             # Insert new sentences
             if self.random_sentences is None:
+                if target_number > rand_sentence_len:
+                    target_number = rand_sentence_len
                 sents_insert = sample(rand_sentences, k=target_number)
             else:
+                if target_number > len(self.random_sentences):
+                    target_number = len(self.random_sentences)
                 sents_insert = sample(self.random_sentences, k=target_number)
             self.random_sentences = sents_insert
             logger.debug("Sentences to be inserted:")

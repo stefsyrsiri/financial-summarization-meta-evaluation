@@ -1,14 +1,34 @@
 import os
-import subprocess
+import torch
 import pandas as pd
 from loguru import logger
 from rouge_score.rouge_scorer import RougeScorer
-# from transformers import BertTokenizer, BertForMaskedLM, BertModel
+from evaluation_methods.BARTScore.bart_score import BARTScorer
 from bert_score import BERTScorer
+from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
+from evaluation_methods.NPowERV1.npower_score import NPowERScorer
+
+rouge1 = RougeScorer(['rouge1'], use_stemmer=True)
+rouge2 = RougeScorer(['rouge2'], use_stemmer=True)
+bertscore = BERTScorer(lang='el')
+npower = NPowERScorer()
+bartscore = BARTScorer(device='cuda:0' if torch.cuda.is_available() else 'cpu', checkpoint='facebook/bart-large-cnn')  # around 2 mins to load
+checkpoint = "evaluation_methods/Bleurt/bleurt/test_checkpoint"
+bleurt = BleurtScorer(checkpoint)
 
 
 class SummaryEvaluator:
-    def __init__(self, gold_dir: str, candidate_dir: str):
+    def __init__(
+            self,
+            gold_dir: str,
+            candidate_dir: str,
+            rouge1: RougeScorer = rouge1,
+            rouge2: RougeScorer = rouge2,
+            npower: NPowERScorer = npower,
+            bertscore: BERTScorer = bertscore,
+            bartscore: BARTScorer = bartscore,
+            bleurt: BleurtScorer = bleurt
+            ):
         self.gold_dir = gold_dir
         self.candidate_dir = candidate_dir
         self.data = {
@@ -18,9 +38,12 @@ class SummaryEvaluator:
             'variant': [],
             'score': [],
         }
-        self.rouge1 = RougeScorer(['rouge1'], use_stemmer=True)
-        self.rouge2 = RougeScorer(['rouge2'], use_stemmer=True)
-        self.bert_scorer = BERTScorer(lang='el')
+        self.rouge1 = rouge1
+        self.rouge2 = rouge2
+        self.npower = npower
+        self.bertscore = bertscore
+        self.bartscore = bartscore
+        self.bleurt = bleurt
         logger.info("SummaryEvaluator initialized.")
 
     def evaluate_summaries(self, source_docs):
@@ -55,15 +78,15 @@ class SummaryEvaluator:
 
                     # ----------N-GRAM
                     # Rouge 1
-                    rouge1_result = self.rouge1.score(target=gold_summary, prediction=candidate_summary)['rouge1'][2]  # fmeasure
+                    rouge1_result = self.rouge1.score(target=gold_summary, prediction=candidate_summary)['rouge1'][1]  # 0: precision, 1: recall, 2: fmeasure
                     self._append_score(source_file=source_file, type='N-gram', method='Rouge1', candidate_variant=candidate_variant, result=rouge1_result)
 
                     # Rouge 2
-                    rouge2_result = self.rouge2.score(target=gold_summary, prediction=candidate_summary)['rouge2'][2]  # fmeasure
+                    rouge2_result = self.rouge2.score(target=gold_summary, prediction=candidate_summary)['rouge2'][1]
                     self._append_score(source_file=source_file, type='N-gram', method='Rouge2', candidate_variant=candidate_variant, result=rouge2_result)
 
                     # ---------GRAPH
-                    autosummeng_score, memog_score, npower_score = self.npower(target=source_path, prediction=candidate_path)
+                    autosummeng_score, memog_score, npower_score = self.npower.score(target=source_path, prediction=candidate_path)
 
                     # AutoSummENG
                     self._append_score(source_file=source_file, type='Graph-based', method='AutoSummENG', candidate_variant=candidate_variant, result=autosummeng_score)
@@ -84,12 +107,16 @@ class SummaryEvaluator:
 
                     # ---------EMBEDDINGS-BASED
                     # BERTScore
-                    P, R, F1 = self.bert_scorer.score([candidate_summary], [gold_summary])
+                    P, R, F1 = self.bertscore.score([candidate_summary], [gold_summary])
                     self._append_score(source_file=source_file, type='Embeddings-based', method='BERTScore', candidate_variant=candidate_variant, result=float(F1))
 
                     # BARTscore
+                    bartscore_result = self.bartscore.score([candidate_summary], [gold_summary], batch_size=4)
+                    self._append_score(source_file=source_file, type='Embeddings-based', method='BARTScore', candidate_variant=candidate_variant, result=bartscore_result[0])
 
                     # Bleurt
+                    bleurt_result = self.bleurt.score(references=[gold_summary], candidates=[candidate_summary])
+                    self._append_score(source_file=source_file, type='Embeddings-based', method='Bleurt', candidate_variant=candidate_variant, result=bleurt_result[0])
 
                     # ---------TRANSFORMER-BASED
                     # GPTscore
@@ -107,20 +134,3 @@ class SummaryEvaluator:
         self.data['eval_method'].append(method)
         self.data['variant'].append(candidate_variant)
         self.data['score'].append(result)
-
-    def npower(self, target, prediction, min_n=3, max_n=3, dwin=3, min_score=0.0, max_score=1.0):
-        result = subprocess.check_output([
-            "java",
-            "-jar",
-            "NPowERV1/V1/NPowER.jar",
-            f"-peer={target}",
-            f"-models={prediction}",
-            f"[-minN={min_n}]",
-            f"[-maxN={max_n}]",
-            f"[-dwin={dwin}]",
-            f"[-minScore={min_score}]",
-            f"[-maxScore={max_score}]",
-            "-allScores",
-            "[-noSelfModel]"
-            ], text=True, stderr=subprocess.DEVNULL)
-        return result.strip().split()

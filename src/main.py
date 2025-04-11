@@ -8,6 +8,8 @@ version.
 """
 
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -18,7 +20,6 @@ from summary_destructor import SummaryDestructor
 from summary_generator import SummaryGenerator
 from summary_evaluator import SummaryEvaluator
 
-
 # Load from .env
 load_dotenv()
 ANNUAL_REPORTS_DIR = os.getenv('ANNUAL_REPORTS_DIR')
@@ -27,7 +28,7 @@ CANDIDATE_SUMMARIES_DIR = os.getenv('CANDIDATE_SUMMARIES_DIR')
 RESULTS_PATH = os.getenv('RESULTS_PATH')
 
 # Configure logger
-logger.add('logs/main_{time}.log', rotation='1 day', compression='zip', level='DEBUG')
+logger.add('logs/main_{time}.log', rotation='1 day', compression='zip', level='DEBUG', filter=lambda record: record["level"].name == "DEBUG")
 logger.add('logs/errors_{time}.log', rotation='1 day', compression='zip', level='ERROR', filter=lambda record: record["level"].name == "ERROR")
 
 
