@@ -15,10 +15,13 @@ import spacy
 from random import choice, sample  # sampling without replacement
 
 nlp = spacy.load('el_core_news_sm')
+SUMMARY_VER = os.getenv('SUMMARY_VER')
+FILE_EXTENSION = os.getenv('FILE_EXTENSION')
+
 # nlp.add_pipe('sentencizer', before='parser')
 
 
-class SummaryDestructor:
+class SummaryCorruptor:
     def __init__(
             self,
             input_summary: str,
@@ -46,7 +49,7 @@ class SummaryDestructor:
         self._random_sentences = None
         self._repeated_sentence = None
 
-        logger.info(f"SummaryDestructor initialized with {self.noise_percentage:.0%} noise.")
+        logger.info(f"SummaryCorruptor initialized with {self.noise_percentage:.0%} noise.")
 
     @property
     def noise_percentage(self):
@@ -56,7 +59,7 @@ class SummaryDestructor:
     def noise_percentage(self, new_percentage: float):
         if isinstance(new_percentage, float) and 0 < new_percentage < 1:
             self._noise_percentage = new_percentage
-            logger.info(f"SummaryDestructor's noise percentage was changed to {self.noise_percentage:.0%}.")
+            logger.info(f"SummaryCorruptor's noise percentage was changed to {self.noise_percentage:.0%}.")
 
     @property
     def random_swap_word_indices(self):
@@ -285,7 +288,7 @@ class SummaryDestructor:
         logger.debug(f"Random summary: {rand_summary}")
 
         # Choose a sentence from the randomly picked summary to insert to the original one
-        with open(os.path.join(gold_dir, f'{rand_summary}_1.txt'), mode='r', encoding='utf-8') as file:
+        with open(os.path.join(gold_dir, f'{rand_summary}{SUMMARY_VER}{FILE_EXTENSION}'), mode='r', encoding='utf-8') as file:
             rand_gold_summary = file.read()
             rand_doc = nlp(rand_gold_summary)
             rand_sentences = [sent.text.strip() for sent in rand_doc.sents]

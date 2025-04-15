@@ -1,7 +1,7 @@
 """
 Main script for running construction of noisy candidate summaries and scoring them.
 
-This script initializes the DataCollector, SummaryDestructor, SummaryGenerator,
+This script initializes the DataCollector, SummaryCorruptor, SummaryGenerator,
 and SummaryEvaluator classes to collect the Greek data, generates new noisy
 summaries based on the Greek data and evaluates them against their original
 version.
@@ -16,7 +16,7 @@ from loguru import logger
 import numpy as np
 
 from data_collector import DataCollector
-from summary_destructor import SummaryDestructor
+from summary_corruptor import SummaryCorruptor
 from summary_generator import SummaryGenerator
 from summary_evaluator import SummaryEvaluator
 
@@ -26,6 +26,8 @@ ANNUAL_REPORTS_DIR = os.getenv('ANNUAL_REPORTS_DIR')
 GOLD_SUMMARIES_DIR = os.getenv('GOLD_SUMMARIES_DIR')
 CANDIDATE_SUMMARIES_DIR = os.getenv('CANDIDATE_SUMMARIES_DIR')
 RESULTS_PATH = os.getenv('RESULTS_PATH')
+SUMMARY_VER = os.getenv('SUMMARY_VER')
+FILE_EXTENSION = os.getenv('FILE_EXTENSION')
 
 # Configure logger
 logger.add('logs/main_{time}.log', rotation='1 day', compression='zip', level='DEBUG', filter=lambda record: record["level"].name == "DEBUG")
@@ -56,17 +58,17 @@ def main():
     for doc in source_docs:
         logger.info(f"Processing annual report '{doc}' for noisy summary generation.")
         try:
-            with open(file=os.path.join(GOLD_SUMMARIES_DIR, f'{doc}_1.txt'), mode='r', encoding='utf-8') as file:
+            with open(file=os.path.join(GOLD_SUMMARIES_DIR, f'{doc}{SUMMARY_VER}{FILE_EXTENSION}'), mode='r', encoding='utf-8') as file:
                 gold_summary = file.read()
 
             # Summary Destruction
-            destructor = SummaryDestructor(input_summary=gold_summary, noise_percentage=0.9)
+            corruptor = SummaryCorruptor(input_summary=gold_summary, noise_percentage=0.9)
 
             # Summary Generation
             percentages = np.round(np.linspace(0.9, 0.1, num=5), 1).tolist()
             for percentage in percentages:
-                destructor.noise_percentage = percentage
-                summary_generator.generate_noisy_summaries(doc_id=doc, destructor=destructor, noise_percentage=percentage)
+                corruptor.noise_percentage = percentage
+                summary_generator.generate_noisy_summaries(doc_id=doc, corruptor=corruptor, noise_percentage=percentage)
         except Exception as e:
             logger.error(f"Failed processing for gold summary {doc}: {e}")
 

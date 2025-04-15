@@ -9,7 +9,7 @@ thesis/
 │── src/
 │   ├── main.py               # Main script
 │   ├── data_collector.py     # Data handling class
-│   ├── summary_destructor.py # Summary destruction class
+│   ├── summary_corruptor.py  # Summary corruption class
 │   ├── summary_generator.py  # Noisy summary generator class
 │   ├── summary_evaluator.py  # Evaluation class
 │── data/

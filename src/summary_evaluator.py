@@ -8,6 +8,9 @@ from bert_score import BERTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
 from evaluation_methods.NPowERV1.npower_score import NPowERScorer
 
+SUMMARY_VER = os.getenv('SUMMARY_VER')
+FILE_EXTENSION = os.getenv('FILE_EXTENSION')
+
 rouge1 = RougeScorer(['rouge1'], use_stemmer=True)
 rouge2 = RougeScorer(['rouge2'], use_stemmer=True)
 bertscore = BERTScorer(lang='el')
@@ -49,12 +52,12 @@ class SummaryEvaluator:
     def evaluate_summaries(self, source_docs):
         logger.info("Starting summary evaluation.")
         for source_file in source_docs:
-            source_path = os.path.join(self.gold_dir, f'{source_file}_1.txt')
+            source_path = os.path.join(self.gold_dir, f'{source_file}{SUMMARY_VER}{FILE_EXTENSION}')
             with open(source_path, mode='r', encoding='utf-8') as gold_f:
                 gold_summary = gold_f.read()
 
             candidate_summaries = [doc for doc in os.listdir(self.candidate_dir) if doc.startswith(f'{source_file}_')]
-            other_summaries = [doc for doc in os.listdir(self.gold_dir) if not doc.startswith(f'{source_file}_') and doc.endswith('_1.txt')]
+            other_summaries = [doc for doc in os.listdir(self.gold_dir) if not doc.startswith(f'{source_file}_') and doc.endswith(f'{SUMMARY_VER}{FILE_EXTENSION}')]
             candidate_summaries.extend(other_summaries[:10])
             candidate_summaries.insert(0, source_file)
 
@@ -62,16 +65,16 @@ class SummaryEvaluator:
                 logger.info(f"Evaluating candidate summary: {candidate_file}")
                 # Source
                 if candidate_file == source_file:
-                    candidate_path = os.path.join(self.gold_dir, f'{candidate_file}_1.txt')
+                    candidate_path = os.path.join(self.gold_dir, f'{candidate_file}{SUMMARY_VER}{FILE_EXTENSION}')
                     candidate_variant = 'source'
                 # Other (gold) summaries
-                elif candidate_file.endswith('_1.txt'):
+                elif candidate_file.endswith(f'{SUMMARY_VER}{FILE_EXTENSION}'):
                     candidate_path = os.path.join(self.gold_dir, candidate_file)
-                    candidate_variant = candidate_file.removesuffix('.txt')
+                    candidate_variant = candidate_file.removesuffix('{FILE_EXTENSION}')
                 # Candidate / Destroyed summaries
                 else:
                     candidate_path = os.path.join(self.candidate_dir, candidate_file)
-                    candidate_variant = candidate_file.removeprefix(f'{source_file}_').removesuffix('.txt')
+                    candidate_variant = candidate_file.removeprefix(f'{source_file}_').removesuffix('{FILE_EXTENSION}')
 
                 with open(candidate_path, mode='r', encoding='utf-8') as cand_f:
                     candidate_summary = cand_f.read()

@@ -1,5 +1,5 @@
 """
-This module utilizes SummaryDestructor to construct new candidate summaries.
+This module utilizes SummaryCorruptor to construct new candidate summaries.
 
 It includes functions to check whether data already exists
 and if it doesn't, it downloads it and unzips it.
@@ -8,7 +8,9 @@ and if it doesn't, it downloads it and unzips it.
 
 import os
 from loguru import logger
-from summary_destructor import SummaryDestructor
+from summary_corruptor import SummaryCorruptor
+
+FILE_EXTENSION = os.getenv('FILE_EXTENSION')
 
 
 class SummaryGenerator:
@@ -33,30 +35,30 @@ class SummaryGenerator:
     def generate_noisy_summaries(
             self,
             doc_id: str,
-            destructor: SummaryDestructor,
+            corruptor: SummaryCorruptor,
             noise_percentage: float
             ):
         """Generates noisy summaries for a given document.
 
         Args:
             doc_id (str): The number of the summary.
-            destructor (SummaryDestructor): An object with summary destructive methods.
+            corruptor (SummaryCorruptor): An object with summary destructive methods.
 
         """
         logger.info(f"Generating noisy summaries for {doc_id}...")
 
         try:
             noisy_summaries = {
-                f'randomly_swapped_words_{noise_percentage}': destructor.random_swap_words(),
-                f'consecutively_swapped_words_{noise_percentage}': destructor.consecutive_swap_words(),
-                f'deleted_words_{noise_percentage}': destructor.remove_words(),
-                f'removed_sentence_{noise_percentage}': destructor.remove_sentence(),
-                f'inserted_sentence_{noise_percentage}': destructor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
-                f'repeated_sentence_{noise_percentage}': destructor.repeat_sentence()
+                f'randomly_swapped_words_{noise_percentage}': corruptor.random_swap_words(),
+                f'consecutively_swapped_words_{noise_percentage}': corruptor.consecutive_swap_words(),
+                f'deleted_words_{noise_percentage}': corruptor.remove_words(),
+                f'removed_sentence_{noise_percentage}': corruptor.remove_sentence(),
+                f'inserted_sentence_{noise_percentage}': corruptor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
+                f'repeated_sentence_{noise_percentage}': corruptor.repeat_sentence()
             }
 
             for summary_type, summary_content in noisy_summaries.items():
-                file_path = os.path.join(self.candidate_dir, f"{doc_id}_{summary_type}.txt")
+                file_path = os.path.join(self.candidate_dir, f"{doc_id}_{summary_type}{FILE_EXTENSION}")
                 with open(file_path, mode='w', encoding='utf-8') as file:
                     file.write(summary_content)
                 logger.info(f"Saved {summary_type} summary for {doc_id} to {file_path}.")
