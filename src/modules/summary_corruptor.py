@@ -10,15 +10,23 @@ This module provides tools that destroy summaries by:
 
 import math
 import os
-from loguru import logger
+
 import spacy
+from dotenv import load_dotenv
+from loguru import logger
 from random import choice, sample  # sampling without replacement
 
-nlp = spacy.load('el_core_news_sm')
+load_dotenv(override=True)
 SUMMARY_VER = os.getenv('SUMMARY_VER')
 FILE_EXTENSION = os.getenv('FILE_EXTENSION')
+LANGUAGE_CODE = os.getenv('LANGUAGE_CODE')
 
-# nlp.add_pipe('sentencizer', before='parser')
+if LANGUAGE_CODE == 'el':
+    nlp = spacy.load('el_core_news_sm')
+elif LANGUAGE_CODE == 'en':
+    nlp = spacy.load('en_core_web_sm')
+elif LANGUAGE_CODE == 'es':
+    nlp = spacy.load('es_core_news_sm')
 
 
 class SummaryCorruptor:

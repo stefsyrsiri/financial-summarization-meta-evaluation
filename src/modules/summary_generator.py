@@ -5,11 +5,13 @@ It includes functions to check whether data already exists
 and if it doesn't, it downloads it and unzips it.
 """
 
-
 import os
-from loguru import logger
-from summary_corruptor import SummaryCorruptor
 
+from dotenv import load_dotenv
+from loguru import logger
+from modules.summary_corruptor import SummaryCorruptor
+
+load_dotenv(override=True)
 FILE_EXTENSION = os.getenv('FILE_EXTENSION')
 
 

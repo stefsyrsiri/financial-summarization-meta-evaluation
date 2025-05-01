@@ -4,3 +4,4 @@ __pycache__/
 /data
 /src/sentence_splitter.py
 /evaluation_methods
+/playground.ipynb
