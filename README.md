@@ -1,10 +1,13 @@
-# Financial Narrative Summarization Evaluation (In-progress)
+# Financial Narrative Summarization Evaluation (🚧 In Progress)
 
-## Overview
+[![python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+![Status](https://img.shields.io/badge/status-in--progress-yellow)
 
-In this project we evaluate automatic summarization evaluation methods on the summaries of Greek annual reports.
+## 📄 Overview
 
-## Project structure
+In this project we evaluate automatic summarization evaluation methods using documents from the FNS 2023.
+
+## 🗂️ Project Structure
 
 ```sh
 thesis/
@@ -32,24 +35,16 @@ thesis/
 
 ```
 
-## Installation
+## 🛠️ Installation
 
-1. Clone the repository:
+```sh
+git clone https://github.com/stefsyrsiri/thesis.git
+cd thesis
+pip install -r requirements.txt
 
-    ```sh
-    git clone https://github.com/stefsyrsiri/thesis.git
-    cd thesis
-    ```
+```
 
-2. Install dependencies:
-
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-## Usage
-
-Run the script:
+## 🚀 Usage
 
 ```sh
 python src/main.py
