@@ -8,6 +8,17 @@ from modules.summary_generator import SummaryGenerator
 
 
 def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir, summary_ver, file_extension):
+    """Generate noisy summaries from the gold summaries.
+
+    Args:
+        source_docs (list): List of documents to process.
+        gold_summaries_dir (str): Directory containing the gold summaries.
+        candidate_summaries_dir (str): Directory to save the generated summaries.
+        summary_ver (str): Version of the summary files.
+        file_extension (str): File extension for the summary files.
+    """
+    logger.info("Generating candidate summaries from gold summaries.")
+
     # Noisy summaries
     summary_generator = SummaryGenerator(source_docs=source_docs, gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, )
 
