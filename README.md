@@ -1,6 +1,6 @@
 # Financial Narrative Summarization Evaluation (🚧 In Progress)
 
-[![python](https://img.shields.io/badge/Python-3.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
+[![python](https://img.shields.io/badge/Python-3.10-3776AB.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 ![Status](https://img.shields.io/badge/status-in--progress-yellow)
 
 ## 📄 Overview
@@ -20,13 +20,17 @@ thesis/
 │       ├── summary_corruptor.py  # Noise insertion class
 │       ├── summary_generator.py  # Candidate summaries generator class
 │       ├── summary_evaluator.py  # Evaluation class
+│       ├── tokenizer.py          # Tokenization handling class
 |   ├── pipelines/
 │       ├── collect.py            # Data collection pipeline
 │       ├── generate.py           # Candidate summaries generation pipeline
 │       ├── evaluate.py           # Evaluation pipeline
-|   ├── utils/                    # TODO: Helper functions
+|   ├── utils/
+│       ├── summary_corruptor_utils.py
+│       ├── summary_evaluator_utils.py
+│       ├── visualization.py      # Plotting functions
 │   ├── main.py                   # Main script
-│── .gitattributes
+│── .gitattributes 
 │── .gitignore
 │── analysis.ipynb                # Noise insertion demonstration and evaluation findings
 │── README.md
@@ -40,12 +44,40 @@ thesis/
 ```sh
 git clone https://github.com/stefsyrsiri/thesis.git
 cd thesis
-pip install -r requirements.txt
+pip install -r requirements.txt  # venv with python==3.10
 
 ```
 
 ## 🚀 Usage
 
+To generate and/or evaluate candidate summaries, configure the language variables in the `.env` file:
+
+* `LANGUAGE`: `English`, `Greek`, `Spanish`
+* `LANGUAGE_CODE`: `en`, `el`, `es`
+* `SUMMARY_VER`:
+  * English: `_1`
+  * Greek: `_2`
+  * Spanish: `_GSI`
+
+### 🔧 Run options
+
 ```sh
-python src/main.py
+# Run the pipeline with selected steps:
+python src/main.py [--collect] [--generate] [--evaluate] [--all]
+```
+
+#### Examples
+
+```sh
+# Collect (Greek) data
+python src/main.py --collect
+
+# Generate noisy summaries
+python src/main.py --generate
+
+# Evaluate summaries
+python src/main.py --evaluate
+
+# Run all steps: collect, generate, evaluate
+python src/main.py --all
 ```
