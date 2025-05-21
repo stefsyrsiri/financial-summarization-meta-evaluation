@@ -10,44 +10,44 @@ This module provides tools that destroy summaries by:
 
 import math
 import os
-
-import spacy
-from dotenv import load_dotenv
-from loguru import logger
 from random import choice, sample  # sampling without replacement
 
-load_dotenv(override=True)
-SUMMARY_VER = os.getenv('SUMMARY_VER')
-FILE_EXTENSION = os.getenv('FILE_EXTENSION')
-LANGUAGE_CODE = os.getenv('LANGUAGE_CODE')
+from dotenv import load_dotenv
+from loguru import logger
 
-if LANGUAGE_CODE == 'el':
-    nlp = spacy.load('el_core_news_sm')
-elif LANGUAGE_CODE == 'en':
-    nlp = spacy.load('en_core_web_sm')
-elif LANGUAGE_CODE == 'es':
-    nlp = spacy.load('es_core_news_sm')
+from utils.summary_corruptor_utils import get_swap_indices
+from modules.tokenizer import Tokenizer
+
+load_dotenv(override=True)
+SUMMARY_VER = os.getenv("SUMMARY_VER")
+FILE_EXTENSION = os.getenv("FILE_EXTENSION")
+LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
 
 
 class SummaryCorruptor:
     def __init__(
             self,
             input_summary: str,
-            noise_percentage: float
+            noise_percentage: float,
+            language: str = LANGUAGE_CODE,
             ):
         """Makes summaries noisy.
 
         Args:
             input_summary (str): The string of the summary to be destroyed.
             noise_percentage (float): The percentage of the summary to be modified.
+            language (str): The language of the summary. Default is dotenv variable "LANGUAGE_CODE".
+                            The language should be passed as an ISO 639-1 code.
+                            Supported languages: "en" (English), "el" (Greek), "es" (Spanish).
 
         """
         if not (0 < noise_percentage < 1):
-            raise ValueError('summary_perc must be positive and less than 1.')
+            raise ValueError("summary_perc must be positive and less than 1.")
         self.input_summary = input_summary
-        self.words = self.input_summary.split()
+        self.nlp = Tokenizer(lang_code=language)
+        self.words = self.nlp.tokenize(self.input_summary)
         self.word_indices = [index for index in range(len(self.words) - 1)]
-        self.sentences = [sent.text.strip() for sent in nlp(self.input_summary).sents]
+        self.sentences = self.nlp.sentencize(self.input_summary)
         self._noise_percentage = noise_percentage
         self._random_swap_word_indices = None
         self._consecutive_swap_word_indices = None
@@ -58,6 +58,8 @@ class SummaryCorruptor:
         self._repeated_sentence = None
 
         logger.info(f"SummaryCorruptor initialized with {self.noise_percentage:.0%} noise.")
+        logger.debug(f"Tokens: {len(self.words)}")
+        logger.debug(f"Sentences: {len(self.sentences)}")
 
     @property
     def noise_percentage(self):
@@ -132,22 +134,6 @@ class SummaryCorruptor:
         if isinstance(new_repeated_sentence, str):
             self._repeated_sentence = new_repeated_sentence
 
-    # Helper for the random_swap and consecutive_swap methods
-    def _get_swap_indices(self):
-        """Helper method for the random_swap_words and consecutive_swap_words methods.
-           Prepares the summary indices and target number used for swapping.
-
-        Returns:
-            The summary indices and the target number used for sampling summary indices.
-
-        """
-        summary_len = len(self.words)
-        logger.debug(f"Total words: {summary_len}")
-
-        target_number = math.ceil(summary_len * self.noise_percentage) // 2
-        logger.debug(f"Number of swaps: {target_number}")
-        return target_number
-
     def random_swap_words(self) -> str:
         """Swaps words from the summary n_swap times.
 
@@ -157,7 +143,7 @@ class SummaryCorruptor:
         """
         split_summary = self.words.copy()
         # Get summary indices and target number for swapping
-        target_number = self._get_swap_indices()
+        target_number = get_swap_indices(self)
 
         # Sample n_words2swap number of words indices
         if self.random_swap_word_indices is None:
@@ -181,7 +167,7 @@ class SummaryCorruptor:
                 index2 += 2
         except IndexError:
             print(str(index1)+" "+str(index2)+" "+str(word_indices_len))
-        return ' '.join(split_summary)
+        return " ".join(split_summary)
 
     def consecutive_swap_words(self) -> str:
         """Consecutively swaps words from the summary n_swap times.
@@ -193,7 +179,7 @@ class SummaryCorruptor:
         split_summary = self.words.copy()
 
         # Get summary indices and target number for swapping
-        target_number = self._get_swap_indices()
+        target_number = get_swap_indices(self)
 
         # Sample n_swaps number of words indices
         if self.consecutive_swap_word_indices is None:
@@ -215,7 +201,7 @@ class SummaryCorruptor:
                 split_summary[index], split_summary[index + 1] = split_summary[index + 1], split_summary[index]
         logger.debug(f"Number of words swapped: {len(already_swapped)}")
         logger.debug(f"Indices swapped: {already_swapped}")
-        return ' '.join(split_summary)
+        return " ".join(split_summary)
 
     def remove_words(self) -> str:
         """Removes n_words from the summary.
@@ -240,7 +226,7 @@ class SummaryCorruptor:
         for i, random_word in enumerate(random_words):
             logger.debug(f"{i}: {random_word}")
             split_summary.remove(random_word)
-        return ' '.join(split_summary)
+        return " ".join(split_summary)
 
     def remove_sentence(self) -> str:
         """Removes a sentence from the summary.
@@ -265,7 +251,7 @@ class SummaryCorruptor:
         for i, sent in enumerate(sents_remove):
             logger.debug(f"{i}:\n{sent}\n")
         new_text = [sent for sent in self.sentences if sent not in sents_remove]
-        return ''.join(new_text)
+        return "".join(new_text)
 
     def insert_sentence(
             self,
@@ -296,10 +282,9 @@ class SummaryCorruptor:
         logger.debug(f"Random summary: {rand_summary}")
 
         # Choose a sentence from the randomly picked summary to insert to the original one
-        with open(os.path.join(gold_dir, f'{rand_summary}{SUMMARY_VER}{FILE_EXTENSION}'), mode='r', encoding='utf-8') as file:
+        with open(os.path.join(gold_dir, f"{rand_summary}{SUMMARY_VER}{FILE_EXTENSION}"), mode="r", encoding="utf-8") as file:
             rand_gold_summary = file.read()
-            rand_doc = nlp(rand_gold_summary)
-            rand_sentences = [sent.text.strip() for sent in rand_doc.sents]
+            rand_sentences = self.nlp.sentencize(rand_gold_summary)
             rand_sentence_len = len(rand_sentences)
             logger.debug(f"Random summary sentences: {rand_sentence_len}")
 
@@ -319,8 +304,8 @@ class SummaryCorruptor:
             logger.debug("Sentences to be inserted:")
             for i, sent in enumerate(sents_insert):
                 logger.debug(f"{i}:\n{sent}\n")
-            original_text = ''.join([sent for sent in self.sentences])
-            new_text = ''.join(sents_insert)
+            original_text = "".join([sent for sent in self.sentences])
+            new_text = "".join(sents_insert)
             return new_text + original_text
 
     def repeat_sentence(self) -> str:
@@ -339,6 +324,6 @@ class SummaryCorruptor:
         if self.repeated_sentence is None:
             self.repeated_sentence = choice(self.sentences)
         logger.debug(f"Sentence to be repeated: {self.repeated_sentence}")
-        original_text = ''.join([sent for sent in self.sentences])
-        new_text = ''.join([self.repeated_sentence] * target_number)
+        original_text = "".join([sent for sent in self.sentences])
+        new_text = "".join([self.repeated_sentence] * target_number)
         return new_text + original_text
