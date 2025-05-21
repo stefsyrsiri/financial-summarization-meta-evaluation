@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from loguru import logger
+from tqdm import tqdm
 
 from modules.summary_corruptor import SummaryCorruptor
 from modules.summary_generator import SummaryGenerator
@@ -22,10 +23,10 @@ def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summarie
     # Noisy summaries
     summary_generator = SummaryGenerator(source_docs=source_docs, gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, )
 
-    for doc in source_docs:
+    for doc in tqdm(source_docs, desc="Processing documents"):
         logger.info(f"Processing annual report '{doc}' for noisy summary generation.")
         try:
-            with open(file=os.path.join(gold_summaries_dir, f'{doc}{summary_ver}{file_extension}'), mode='r', encoding='utf-8') as file:
+            with open(file=os.path.join(gold_summaries_dir, f"{doc}{summary_ver}{file_extension}"), mode="r", encoding="utf-8") as file:
                 gold_summary = file.read()
 
             # Summary Destruction
