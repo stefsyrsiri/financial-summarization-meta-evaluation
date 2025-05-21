@@ -15,14 +15,14 @@ from zipfile import ZipFile
 class DataCollector:
     def __init__(
             self,
-            input_path: str = 'data',
-            output_path: str = 'data/Greek/training/candidate_summaries/'
+            input_path: str = "data",
+            output_path: str = "data/Greek/training/candidate_summaries/"
             ):
         """Collects Greek data.
 
         Args:
             input_path (str, optional): The path to retrieve data from. Defaults to 'data'.
-            output_path (str, optional): The path to save the collected data. Defaults to 'data/Greek/training/candidate_summaries/'.
+            output_path (str, optional): The path to save the collected data. Defaults to "data/Greek/training/candidate_summaries/".
 
         """
         self.input_path = input_path
@@ -45,7 +45,7 @@ class DataCollector:
         """Adds 'Greek data' from FNS to the 'data' folder."""
 
         if not self._check_data_exists(path=self.input_path):
-            greek_data_url = 'https://github.com/iit-Demokritos/FNS2023_data/raw/refs/heads/main/Greek.zip'
+            greek_data_url = "https://github.com/iit-Demokritos/FNS2023_data/raw/refs/heads/main/Greek.zip"
             http_response = urlopen(greek_data_url)
             zipfile = ZipFile(BytesIO(http_response.read()))
-            zipfile.extractall(path='data')
+            zipfile.extractall(path="data")
