@@ -12,7 +12,7 @@ from loguru import logger
 from modules.summary_corruptor import SummaryCorruptor
 
 load_dotenv(override=True)
-FILE_EXTENSION = os.getenv('FILE_EXTENSION')
+FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 
 
 class SummaryGenerator:
@@ -51,17 +51,17 @@ class SummaryGenerator:
 
         try:
             noisy_summaries = {
-                f'randomly_swapped_words_{noise_percentage}': corruptor.random_swap_words(),
-                f'consecutively_swapped_words_{noise_percentage}': corruptor.consecutive_swap_words(),
-                f'deleted_words_{noise_percentage}': corruptor.remove_words(),
-                f'removed_sentence_{noise_percentage}': corruptor.remove_sentence(),
-                f'inserted_sentence_{noise_percentage}': corruptor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
-                f'repeated_sentence_{noise_percentage}': corruptor.repeat_sentence()
+                f"randomly_swapped_words_{noise_percentage}": corruptor.random_swap_words(),
+                f"consecutively_swapped_words_{noise_percentage}": corruptor.consecutive_swap_words(),
+                f"deleted_words_{noise_percentage}": corruptor.remove_words(),
+                f"removed_sentence_{noise_percentage}": corruptor.remove_sentence(),
+                f"inserted_sentence_{noise_percentage}": corruptor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
+                f"repeated_sentence_{noise_percentage}": corruptor.repeat_sentence()
             }
 
             for summary_type, summary_content in noisy_summaries.items():
                 file_path = os.path.join(self.candidate_dir, f"{doc_id}_{summary_type}{FILE_EXTENSION}")
-                with open(file_path, mode='w', encoding='utf-8') as file:
+                with open(file_path, mode="w", encoding="utf-8") as file:
                     file.write(summary_content)
                 logger.info(f"Saved {summary_type} summary for {doc_id} to {file_path}.")
 
