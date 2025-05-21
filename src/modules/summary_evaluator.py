@@ -14,7 +14,7 @@ from rouge_score.rouge_scorer import RougeScorer
 # from evaluation_methods.moverscore.moverscore import get_idf_dict, word_mover_score
 from evaluation_methods.BARTScore.bart_score import BARTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
-from evaluation_methods.NPowERV1.npower_score import NPowERScorer
+from evaluation_methods.NPowERV1 import npower
 from utils.summary_evaluator_utils import append_score
 from modules.tokenizer import Tokenizer
 
@@ -23,10 +23,9 @@ SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
 
-rouge1 = RougeScorer(["rouge1"], use_stemmer=True, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
-rouge2 = RougeScorer(["rouge2"], use_stemmer=True, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
+rouge1 = RougeScorer(["rouge1"], use_stemmer=False, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
+rouge2 = RougeScorer(["rouge2"], use_stemmer=False, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
 bertscore = BERTScorer(lang=LANGUAGE_CODE)
-npower = NPowERScorer()
 
 if LANGUAGE_CODE == "en":
     bartscore = BARTScorer(device="cuda:0" if torch.cuda.is_available() else "cpu", checkpoint="facebook/bart-large-cnn")  # around 2 mins to load
@@ -123,7 +122,7 @@ class SummaryEvaluator:
                     P, R, F1 = bertscore.score([candidate_summary], [gold_summary])
                     duration = time.time() - start_time
                     append_score(self, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=candidate_variant, result=float(F1), duration=duration)
-                
+
                     if LANGUAGE_CODE == "en":
 
                         # MoverScore
