@@ -5,3 +5,5 @@ __pycache__/
 /src/sentence_splitter.py
 /evaluation_methods
 /playground.ipynb
+src/modules/summary_evaluator_optimized.py
+src/pipelines/evaluate_optimized.py
