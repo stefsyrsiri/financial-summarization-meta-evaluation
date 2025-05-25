@@ -19,9 +19,10 @@ class Tokenizer:
             raise ValueError(f"No spaCy model available for language: {lang_code}")
 
         if lang_code not in Tokenizer._LOADED_MODELS:
-            Tokenizer._LOADED_MODELS[lang_code] = spacy.load(models[lang_code])
+            Tokenizer._LOADED_MODELS[lang_code] = spacy.load(models[lang_code], disable=["tagger", "parser", "ner"])
 
         self.nlp = Tokenizer._LOADED_MODELS[lang_code]
+        self.nlp.max_length = 2_000_000
 
     def tokenize(self, text):
         return [token.text for token in self.nlp(text)]
