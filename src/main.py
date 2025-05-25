@@ -61,7 +61,6 @@ def main():
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
-    logger.info(f"Loaded {len(source_docs)} annual reports for noisy summary generation.")
     logger.info(f"Loaded {source_docs}.")
 
     args = parser.parse_args()
