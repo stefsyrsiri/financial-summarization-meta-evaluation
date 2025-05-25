@@ -57,7 +57,7 @@ To generate and/or evaluate candidate summaries, configure the language variable
 * `SUMMARY_VER`:
   * English: `_1`
   * Greek: `_2`
-  * Spanish: `_GSI`
+  * Spanish: `_GS1`
 
 ### 🔧 Run options
 
