@@ -11,26 +11,28 @@ from tqdm import tqdm
 
 from rouge_score.rouge_scorer import RougeScorer
 
-# from evaluation_methods.moverscore.moverscore import get_idf_dict, word_mover_score
+# from evaluation_methods.MoverScore.moverscore import get_idf_dict, word_mover_score
 from evaluation_methods.BARTScore.bart_score import BARTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
 from evaluation_methods.NPowERV1 import npower
 from utils.summary_evaluator_utils import append_score
 from modules.tokenizer import Tokenizer
 
-load_dotenv
+load_dotenv()
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
+RESULTS_PATH = os.getenv("RESULTS_PATH")
 
-rouge1 = RougeScorer(["rouge1"], use_stemmer=False, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
-rouge2 = RougeScorer(["rouge2"], use_stemmer=False, tokenizer=Tokenizer(lang_code=LANGUAGE_CODE))
-bertscore = BERTScorer(lang=LANGUAGE_CODE)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+tokenizer = Tokenizer(lang_code=LANGUAGE_CODE)
+rouge1 = RougeScorer(["rouge1"], use_stemmer=False, tokenizer=tokenizer)
+rouge2 = RougeScorer(["rouge2"], use_stemmer=False, tokenizer=tokenizer)
+bertscore = BERTScorer(lang=LANGUAGE_CODE, device=device)
 
 if LANGUAGE_CODE == "en":
-    bartscore = BARTScorer(device="cuda:0" if torch.cuda.is_available() else "cpu", checkpoint="facebook/bart-large-cnn")  # around 2 mins to load
-    checkpoint = "evaluation_methods/Bleurt/bleurt/test_checkpoint"
-    bleurt = BleurtScorer(checkpoint)
+    bartscore = BARTScorer(device=device, checkpoint="facebook/bart-large-cnn")
+    bleurt = BleurtScorer(device=device, checkpoint="evaluation_methods/Bleurt/bleurt/test_checkpoint")
 
 
 class SummaryEvaluator:
@@ -58,9 +60,14 @@ class SummaryEvaluator:
             with open(source_path, mode="r", encoding="utf-8") as gold_f:
                 gold_summary = gold_f.read()
 
+            # Actual candidate summaries
             candidate_summaries = [doc for doc in os.listdir(self.candidate_dir) if doc.startswith(f"{source_file}_")]
+
+            # 10 randoms
             other_summaries = [doc for doc in os.listdir(self.gold_dir) if not doc.startswith(f"{source_file}_") and doc.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}")]
             candidate_summaries.extend(other_summaries[:10])
+
+            # Source summary
             candidate_summaries.insert(0, source_file)
 
             for candidate_file in candidate_summaries:
@@ -114,8 +121,6 @@ class SummaryEvaluator:
 
                     # FRESA
 
-                    # BRUGEscore
-
                     # ---------EMBEDDINGS-BASED
                     # BERTScore
                     start_time = time.time()
@@ -124,18 +129,6 @@ class SummaryEvaluator:
                     append_score(self, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=candidate_variant, result=float(F1), duration=duration)
 
                     if LANGUAGE_CODE == "en":
-
-                        # MoverScore
-                        # try:
-                        #     start_time = time.time()
-                        #     idf_dict_hyp = get_idf_dict(candidate_summary)
-                        #     idf_dict_ref = get_idf_dict(gold_summary)
-                        #     score = word_mover_score(refs=[gold_summary], hyps=[candidate_summary], idf_dict_ref=idf_dict_ref, idf_dict_hyp=idf_dict_hyp)[0]
-                        # except Exception:
-                        #     score = 0.0
-                        # finally:
-                        #     duration = time.time() - start_time
-                        #     append_score(self, source_file=source_file, type="Embeddings-based", method="MoverScore", candidate_variant=candidate_variant, result=score, duration=duration)
 
                         # BARTscore
                         start_time = time.time()
@@ -150,11 +143,8 @@ class SummaryEvaluator:
                         append_score(self, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=candidate_variant, result=bleurt_result[0], duration=duration)
 
                     # ---------TRANSFORMER-BASED
-                    # GPTscore
-
                     # G-Eval
-
-                    # Extract-then-Evaluate
-
+            results = pd.DataFrame.from_dict(self.data, orient="index").transpose()
+            results.to_csv(RESULTS_PATH, index=False)
         logger.info("Summary evaluation completed.")
-        return pd.DataFrame.from_dict(self.data, orient="index").transpose()
+        return results
