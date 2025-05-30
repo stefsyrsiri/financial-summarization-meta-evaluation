@@ -22,6 +22,8 @@ class Tokenizer:
             Tokenizer._LOADED_MODELS[lang_code] = spacy.load(models[lang_code], disable=["tagger", "parser", "ner"])
 
         self.nlp = Tokenizer._LOADED_MODELS[lang_code]
+        if "sentencizer" not in self.nlp.pipe_names:
+            self.nlp.add_pipe("sentencizer")
         self.nlp.max_length = 2_000_000
 
     def tokenize(self, text):
