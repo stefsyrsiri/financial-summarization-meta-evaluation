@@ -27,6 +27,7 @@ def plot_scores(
 
     for ax, df, lang in zip(axes, dfs, languages):
 
+        # Base lineplot for source and noise variant
         sns.lineplot(
             data=df[(df["variant_type"] == noise_variant) | (df["variant_type"] == "source")],
             x="noise_percentage",
@@ -38,11 +39,21 @@ def plot_scores(
             ax=ax
         )
 
+        # Average for 'random_summary'
+        random_summary_mean = df[df["variant_type"] == "random_summary"]["score"].mean()
+        ax.axhline(
+            y=random_summary_mean,
+            linestyle="--",
+            color="gray",
+            label="AVG Randomness"
+        )
+
         ax.set_title(f"{lang}")
         ax.set_xlabel("Noise Percentage")
-        ax.set_ylabel("Average Score" if lang == "English" else "")  # Only left plot shows y label
+        ax.set_ylabel("Average Score" if lang == "English" else "")
         ax.set_ylim(0, 1.05)
         ax.set_yticks(np.arange(0.0, 1.1, step=0.1))
+        ax.legend()
 
     fig.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
