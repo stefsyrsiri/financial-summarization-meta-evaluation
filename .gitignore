@@ -1,12 +1,25 @@
+# Python cache and environment
 __pycache__/
-/logs
-/__MACOSX
-/data
-/src/sentence_splitter.py
-/evaluation_methods
-/playground.ipynb
-src/modules/summary_evaluator_optimized.py
-src/pipelines/evaluate_optimized.py
 .env
+
+# Data files
 df.csv
 df.parquet
+/data
+
+# Logs
+/logs
+
+# MacOS system files
+/__MACOSX
+
+# Source code files to ignore
+src/sentence_splitter.py
+src/modules/summary_evaluator_optimized.py
+src/pipelines/evaluate_optimized.py
+
+# Evaluation methods
+/evaluation_methods
+
+# Notebooks
+notebooks/playground.ipynb
