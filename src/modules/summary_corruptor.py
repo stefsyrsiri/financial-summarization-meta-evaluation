@@ -30,6 +30,7 @@ class SummaryCorruptor:
             input_summary: str,
             noise_percentage: float,
             language: str = LANGUAGE_CODE,
+            truncate_for_bert: bool = False
             ):
         """Makes summaries noisy.
 
@@ -44,10 +45,16 @@ class SummaryCorruptor:
         if not (0 < noise_percentage < 1):
             raise ValueError("summary_perc must be positive and less than 1.")
         self.input_summary = input_summary
+        self.truncate_for_bert = truncate_for_bert
         self.nlp = Tokenizer(lang_code=language)
-        self.words = self.nlp.tokenize(self.input_summary)
+        if truncate_for_bert:
+            # Truncate the summary to 350 spaCy tokens for BERT
+            self.words = self.nlp.tokenize(self.input_summary)[:350]
+            self.sentences = self.nlp.sentencize(" ".join(self.words))
+        else:
+            self.words = self.nlp.tokenize(self.input_summary)
+            self.sentences = self.nlp.sentencize(self.input_summary)
         self.word_indices = [index for index in range(len(self.words) - 1)]
-        self.sentences = self.nlp.sentencize(self.input_summary)
         self._noise_percentage = noise_percentage
         self._random_swap_word_indices = None
         self._consecutive_swap_word_indices = None
