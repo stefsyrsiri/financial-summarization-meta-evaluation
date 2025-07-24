@@ -15,8 +15,8 @@ from random import choice, sample  # sampling without replacement
 from dotenv import load_dotenv
 from loguru import logger
 
-from utils.summary_corruptor_utils import get_swap_indices
-from modules.tokenizer import Tokenizer
+from src.utils.summary_corruptor_utils import get_swap_indices
+from src.modules.tokenizer import Tokenizer
 
 load_dotenv(override=True)
 SUMMARY_VER = os.getenv("SUMMARY_VER")
