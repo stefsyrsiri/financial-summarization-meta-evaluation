@@ -38,4 +38,4 @@ def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summarie
                 corruptor.noise_percentage = percentage
                 summary_generator.generate_noisy_summaries(doc_id=doc, corruptor=corruptor, noise_percentage=percentage)
         except Exception as e:
-            logger.error(f"Failed processing for gold summary {doc}: {e}")
+            logger.exception(f"Failed processing for gold summary {doc}: {e}")

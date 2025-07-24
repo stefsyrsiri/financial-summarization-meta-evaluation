@@ -17,4 +17,4 @@ def evaluate_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir,
         results.to_csv(results_path, index=False)
         logger.info(f"Successfully evaluated {LANGUAGE} data and saved results to {results_path}")
     except Exception as e:
-        logger.error(f"Failed to evaluate the summaries: {e}")
+        logger.exception(f"Failed to evaluate the summaries: {e}")

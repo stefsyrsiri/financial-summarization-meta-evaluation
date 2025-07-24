@@ -1,6 +1,6 @@
 from loguru import logger
 
-from modules.data_collector import DataCollector
+from src.modules.data_collector import DataCollector
 
 
 def collect_data():
@@ -11,5 +11,5 @@ def collect_data():
         data_collector.collect_data()
         logger.info("Successfully collected Greek data.")
     except Exception as e:
-        logger.error(f"Failed data collection: {e}")
+        logger.exception(f"Failed data collection: {e}")
         return

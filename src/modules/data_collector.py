@@ -11,6 +11,8 @@ from io import BytesIO
 from urllib.request import urlopen
 from zipfile import ZipFile
 
+from loguru import logger
+
 
 class DataCollector:
     def __init__(
@@ -38,8 +40,13 @@ class DataCollector:
             bool: True if data already exists and False if it doesn't.
 
         """
-        n_path_items = len(os.listdir(path))
-        return n_path_items != 0
+        if os.path.isdir(path):
+            n_path_items = len(os.listdir(path))
+            return n_path_items != 0
+        else:
+            logger.info(f"Creating directory: {path}")
+            os.makedirs(path)
+            return False
 
     def collect_data(self) -> None:
         """Adds 'Greek data' from FNS to the 'data' folder."""
@@ -48,4 +55,6 @@ class DataCollector:
             greek_data_url = "https://github.com/iit-Demokritos/FNS2023_data/raw/refs/heads/main/Greek.zip"
             http_response = urlopen(greek_data_url)
             zipfile = ZipFile(BytesIO(http_response.read()))
-            zipfile.extractall(path="data")
+            zipfile.extractall(path=self.output_path)
+        else:
+            logger.info("Data already exists. Skipping download.")

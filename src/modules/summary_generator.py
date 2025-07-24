@@ -66,5 +66,5 @@ class SummaryGenerator:
                 logger.info(f"Saved {summary_type} summary for {doc_id} to {file_path}.")
 
         except Exception as e:
-            logger.error(f"Failed to generate noisy summaries for {doc_id}: {e}")
+            logger.exception(f"Failed to generate noisy summaries for {doc_id}: {e}")
             raise

@@ -141,7 +141,7 @@ class SummaryEvaluator:
                             append_score(self, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=candidate_variant, result=bleurt_result[0], duration=duration)
 
             except FileNotFoundError as e:
-                logger.error(f"File not found: {e}. Skipping {source_file}.")
+                logger.exception(f"File not found: {e}. Skipping {source_file}.")
                 continue
             results = pd.DataFrame.from_dict(self.data, orient="index").transpose()
             results.to_csv(RESULTS_PATH, index=False)
