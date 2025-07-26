@@ -9,6 +9,7 @@ df.parquet
 
 # Logs
 /logs
+*.log
 
 # MacOS system files
 /__MACOSX
@@ -23,3 +24,4 @@ src/pipelines/evaluate_optimized.py
 
 # Notebooks
 notebooks/playground.ipynb
+watchdog.py
