@@ -1,5 +1,6 @@
 import os
 import time
+from filelock import FileLock
 
 import pandas as pd
 import torch
@@ -21,7 +22,6 @@ load_dotenv()
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
-RESULTS_PATH = os.getenv("RESULTS_PATH")
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 tokenizer = Tokenizer(lang_code=LANGUAGE_CODE)
@@ -37,25 +37,39 @@ if LANGUAGE_CODE == "en":
 class SummaryEvaluator:
     def __init__(
             self,
+            source_docs: list,
             gold_dir: str,
             candidate_dir: str,
+            results_path: str = os.getenv("RESULTS_PATH"),
             ):
+        self.source_docs = source_docs
         self.gold_dir = gold_dir
         self.candidate_dir = candidate_dir
-        self.data = {
-            "source_doc": [],
-            "eval_type": [],
-            "eval_method": [],
-            "variant": [],
-            "score": [],
-            "duration": [],
-        }
-        logger.info("SummaryEvaluator initialized.")
+        self.results_path = results_path
+        self.checkpoint_file = self.results_path + "_checkpoint.txt"
+        if os.path.exists(self.checkpoint_file):
+            with open(self.checkpoint_file, "r") as f:
+                self._evaluated_docs = f.read().splitlines()
+        else:
+            self._evaluated_docs = []
 
-    def evaluate_summaries(self, source_docs):
+        logger.info(f"SummaryEvaluator initialized. Source docs: {len(self.source_docs)}, Already evaluated: {len(self._evaluated_docs)}.")
+
+    def evaluate_summaries(self):
         logger.info("Starting summary evaluation.")
-        for source_file in tqdm(source_docs, desc="Processing documents"):
+
+        self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs]
+        for source_file in tqdm(self.source_docs, desc="Processing documents"):
+            logger.info(f"Evaluating source document: {source_file}")
             source_path = os.path.join(self.gold_dir, f"{source_file}{SUMMARY_VER}{FILE_EXTENSION}")
+            data = {
+                "source_doc": [],
+                "eval_type": [],
+                "eval_method": [],
+                "variant": [],
+                "score": [],
+                "duration": []
+            }
             try:
                 with open(source_path, mode="r", encoding="utf-8") as gold_f:
                     gold_summary = gold_f.read()
@@ -85,65 +99,97 @@ class SummaryEvaluator:
                         candidate_path = os.path.join(self.candidate_dir, candidate_file)
                         candidate_variant = candidate_file.removeprefix(f"{source_file}_").removesuffix(f"{FILE_EXTENSION}")
 
-                    with open(candidate_path, mode="r", encoding="utf-8") as cand_f:
-                        candidate_summary = cand_f.read()
+                    try:
+                        with open(candidate_path, mode="r", encoding="utf-8") as cand_f:
+                            candidate_summary = cand_f.read()
 
-                        # ----------N-GRAM
-                        # Rouge 1
-                        start_time = time.time()
-                        rouge1_result = rouge1.score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
-                        duration = time.time() - start_time
-                        append_score(self, source_file=source_file, type="N-gram", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
-
-                        # Rouge 2
-                        start_time = time.time()
-                        rouge2_result = rouge2.score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
-                        duration = time.time() - start_time
-                        append_score(self, source_file=source_file, type="N-gram", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
-
-                        # ---------GRAPH
-                        start_time = time.time()
-                        autosummeng_score, memog_score, npower_score = npower.score(target=source_path, prediction=candidate_path)
-                        duration = time.time() - start_time
-
-                        # AutoSummENG
-                        append_score(self, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
-
-                        # MeMoG
-                        append_score(self, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
-
-                        # ---------PROBABILISTIC
-                        # SummTriver
-
-                        # ---------META
-                        # NPowER - computed in graph methods
-                        append_score(self, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
-
-                        # ---------EMBEDDINGS-BASED
-                        # BERTScore
-                        start_time = time.time()
-                        P, R, F1 = bertscore.score([candidate_summary], [gold_summary])
-                        duration = time.time() - start_time
-                        append_score(self, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=candidate_variant, result=float(F1), duration=duration)
-
-                        if LANGUAGE_CODE == "en":
-
-                            # BARTscore
+                            # ----------N-GRAM
+                            # Rouge 1
                             start_time = time.time()
-                            bartscore_result = bartscore.score([candidate_summary], [gold_summary], batch_size=4)
+                            rouge1_result = rouge1.score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
                             duration = time.time() - start_time
-                            append_score(self, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=candidate_variant, result=bartscore_result[0], duration=duration)
+                            append_score(data, source_file=source_file, type="N-gram", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
 
-                            # Bleurt
+                            # Rouge 2
                             start_time = time.time()
-                            bleurt_result = bleurt.score(references=[gold_summary], candidates=[candidate_summary])
+                            rouge2_result = rouge2.score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
                             duration = time.time() - start_time
-                            append_score(self, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=candidate_variant, result=bleurt_result[0], duration=duration)
+                            append_score(data, source_file=source_file, type="N-gram", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
+
+                            # ---------GRAPH
+                            start_time = time.time()
+                            autosummeng_score, memog_score, npower_score = npower.score(target=source_path, prediction=candidate_path)
+                            duration = time.time() - start_time
+
+                            # AutoSummENG
+                            append_score(data, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
+
+                            # MeMoG
+                            append_score(data, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
+
+                            # ---------META
+                            # NPowER - computed in graph methods
+                            append_score(data, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
+
+                            # ---------EMBEDDINGS-BASED
+                            # BERTScore
+                            start_time = time.time()
+                            P, R, F1 = bertscore.score([candidate_summary], [gold_summary])
+                            duration = time.time() - start_time
+                            append_score(data, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=candidate_variant, result=float(F1), duration=duration)
+
+                            if LANGUAGE_CODE == "en":
+
+                                # BARTscore
+                                start_time = time.time()
+                                bartscore_result = bartscore.score([candidate_summary], [gold_summary], batch_size=4)
+                                duration = time.time() - start_time
+                                append_score(data, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=candidate_variant, result=bartscore_result[0], duration=duration)
+
+                                # Bleurt
+                                start_time = time.time()
+                                bleurt_result = bleurt.score(references=[gold_summary], candidates=[candidate_summary])
+                                duration = time.time() - start_time
+                                append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=candidate_variant, result=bleurt_result[0], duration=duration)
+
+                    except FileNotFoundError as e:
+                        logger.exception(f"File not found: {e}. Skipping candidate_file: {candidate_file}.")
+                        continue
+
+                # Append results to CSV with file locking (for multiprocessing safety)
+                results_lock_path = self.results_path + ".lock"
+                try:
+                    with FileLock(results_lock_path):
+                        results_df = pd.DataFrame.from_dict(data, orient="index").transpose()
+                        results_path_csv = self.results_path + ".csv"
+                        results_df.to_csv(
+                            results_path_csv,
+                            mode="a",
+                            header=not os.path.exists(results_path_csv),
+                            index=False
+                            )
+
+                    # Save to checkpoint file to avoid re-evaluating
+                    checkpoint_lock_path = self.checkpoint_file + ".lock"
+                    with FileLock(checkpoint_lock_path):
+                        with open(self.checkpoint_file, "a") as f:
+                            f.write(f"{source_file}\n")
+
+                    logger.info(f"Evaluated {source_file} and saved results to {results_path_csv}.")
+                except Exception as e:
+                    logger.exception(f"Failed to save results for {source_file}: {e}")
+                    continue
 
             except FileNotFoundError as e:
-                logger.exception(f"File not found: {e}. Skipping {source_file}.")
+                logger.exception(f"File not found: {e}. Skipping source_doc: {source_file}.")
                 continue
-            results = pd.DataFrame.from_dict(self.data, orient="index").transpose()
-            results.to_csv(RESULTS_PATH, index=False)
+
+        with open(self.checkpoint_file, "r") as f:
+            evaluated_docs = f.read().splitlines()
+        logger.info(f"Evaluated documents: {len(evaluated_docs)} ({len(evaluated_docs)/len(self.source_docs):.2%}).")
+
+        # Clean up checkpoint file
+        if os.path.exists(self.checkpoint_file):
+            os.remove(self.checkpoint_file)
+
         logger.info("Summary evaluation completed.")
-        return results
