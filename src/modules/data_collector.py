@@ -55,6 +55,6 @@ class DataCollector:
             greek_data_url = "https://github.com/iit-Demokritos/FNS2023_data/raw/refs/heads/main/Greek.zip"
             http_response = urlopen(greek_data_url)
             zipfile = ZipFile(BytesIO(http_response.read()))
-            zipfile.extractall(path=self.output_path)
+            zipfile.extractall(path=self.input_path)
         else:
             logger.info("Data already exists. Skipping download.")
