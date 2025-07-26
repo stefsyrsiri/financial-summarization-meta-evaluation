@@ -47,7 +47,6 @@ thesis/
 git clone https://github.com/stefsyrsiri/thesis.git
 cd thesis
 pip install -r requirements.txt  # venv with python==3.10
-
 ```
 
 ## 🚀 Usage
