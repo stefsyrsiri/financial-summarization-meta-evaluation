@@ -19,7 +19,7 @@ class Tokenizer:
             raise ValueError(f"No spaCy model available for language: {lang_code}")
 
         if lang_code not in Tokenizer._LOADED_MODELS:
-            Tokenizer._LOADED_MODELS[lang_code] = spacy.load(models[lang_code], disable=["tagger", "parser", "ner"])
+            Tokenizer._LOADED_MODELS[lang_code] = spacy.load(models[lang_code], disable=["tagger", "parser", "ner", "lemmatizer"])
 
         self.nlp = Tokenizer._LOADED_MODELS[lang_code]
         if "sentencizer" not in self.nlp.pipe_names:
