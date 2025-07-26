@@ -11,13 +11,13 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # TensorFlow suppress info/warning
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
-from argparse import ArgumentParser
+warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
 
-import tensorflow as tf
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)  # TF 1.x legacy logs
+from argparse import ArgumentParser
 from dotenv import load_dotenv
 from loguru import logger
 from transformers.utils import logging as hf_logging
@@ -61,7 +61,8 @@ def main():
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
-    logger.info(f"Loaded {source_docs}.")
+    logger.info(f"Running process on {len(source_docs)} annual reports.")
+    logger.info(f"Source documents: {source_docs}")
 
     args = parser.parse_args()
 
