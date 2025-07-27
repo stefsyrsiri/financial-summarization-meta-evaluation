@@ -57,12 +57,14 @@ def main():
     parser.add_argument("--collect", action="store_true", help="Collect data")
     parser.add_argument("--generate", action="store_true", help="Generate noisy summaries")
     parser.add_argument("--evaluate", action="store_true", help="Evaluate summaries")
+    parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation")
+    parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation")
     parser.add_argument("--all", action="store_true", help="Run all steps")
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
     logger.info(f"Running process on {len(source_docs)} annual reports.")
-    logger.info(f"Source documents: {source_docs}")
+    logger.debug(f"Source documents: {source_docs}")
 
     args = parser.parse_args()
 
@@ -81,7 +83,9 @@ def main():
             source_docs=source_docs,
             gold_summaries_dir=GOLD_SUMMARIES_DIR,
             candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
-            results_path=RESULTS_PATH
+            results_path=RESULTS_PATH,
+            run_cpu=args.cpu or (not args.cpu and not args.gpu),
+            run_gpu=args.gpu or (not args.cpu and not args.gpu)
         )
 
 
