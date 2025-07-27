@@ -7,7 +7,6 @@ import torch
 from bert_score import BERTScorer
 from dotenv import load_dotenv
 from loguru import logger
-from tqdm import tqdm
 
 from rouge_score.rouge_scorer import RougeScorer
 
@@ -15,7 +14,12 @@ from rouge_score.rouge_scorer import RougeScorer
 from evaluation_methods.BARTScore.bart_score import BARTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
 from evaluation_methods.NPowERV1 import npower
-from src.utils.summary_evaluator_utils import append_score
+from src.utils.summary_evaluator_utils import (
+    get_candidate_filenames,
+    get_candidate_metadata,
+    load_candidate_texts,
+    append_score
+)
 from src.modules.tokenizer import Tokenizer
 
 load_dotenv()
@@ -44,24 +48,134 @@ class SummaryEvaluator:
             ):
         self.source_docs = source_docs
         self.gold_dir = gold_dir
-        self.candidate_dir = candidate_dir
+        self.candidates_dir = candidate_dir
         self.results_path = results_path
-        self.checkpoint_file = self.results_path + "_checkpoint.txt"
-        if os.path.exists(self.checkpoint_file):
-            with open(self.checkpoint_file, "r") as f:
-                self._evaluated_docs = f.read().splitlines()
+        self.checkpoint_file_cpu = self.results_path + "_checkpoint_cpu.txt"
+        if os.path.exists(self.checkpoint_file_cpu):
+            with open(self.checkpoint_file_cpu, "r") as f:
+                self._evaluated_docs_cpu = f.read().splitlines()
+                self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs_cpu]
         else:
-            self._evaluated_docs = []
+            self._evaluated_docs_cpu = []
+        self.checkpoint_file_gpu = self.results_path + "_checkpoint_gpu.txt"
+        if os.path.exists(self.checkpoint_file_gpu):
+            with open(self.checkpoint_file_gpu, "r") as f:
+                self._evaluated_docs_gpu = f.read().splitlines()
+                self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs_gpu]
+        else:
+            self._evaluated_docs_gpu = []
+        self._rouge1 = rouge1
+        self._rouge2 = rouge2
+        self._npower = npower
+        self._bertscore = bertscore
+        self._bartscore = bartscore if LANGUAGE_CODE == "en" else None
+        self._bleurt = bleurt if LANGUAGE_CODE == "en" else None
 
-        logger.info(f"SummaryEvaluator initialized. Source docs: {len(self.source_docs)}, Already evaluated: {len(self._evaluated_docs)}.")
+        logger.info(f"SummaryEvaluator initialized. Source docs: {len(self.source_docs)}, Already evaluated: {len(self._evaluated_docs_cpu)} (CPU), {len(self._evaluated_docs_gpu)} (GPU).")
 
-    def evaluate_summaries(self):
-        logger.info("Starting summary evaluation.")
+    def evaluate_summaries(self, source_doc: str):
+        logger.info(f"Evaluating source document: {source_doc}")
+        gold_summary_path = os.path.join(self.gold_dir, f"{source_doc}{SUMMARY_VER}{FILE_EXTENSION}")
+        data = {
+            "source_doc": [],
+            "eval_type": [],
+            "eval_method": [],
+            "variant": [],
+            "score": [],
+            "duration": []
+            }
+        try:
+            with open(gold_summary_path, mode="r", encoding="utf-8") as gold_f:
+                gold_summary = gold_f.read()
 
-        self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs]
-        for source_file in tqdm(self.source_docs, desc="Processing documents"):
-            logger.info(f"Evaluating source document: {source_file}")
-            source_path = os.path.join(self.gold_dir, f"{source_file}{SUMMARY_VER}{FILE_EXTENSION}")
+            candidate_summaries = get_candidate_filenames(self, source_doc)
+
+            for candidate_file in candidate_summaries:
+                logger.info(f"Evaluating candidate summary: {candidate_file}")
+                candidate_path, candidate_variant = get_candidate_metadata(self, candidate_file, source_doc)
+
+                try:
+                    with open(candidate_path, mode="r", encoding="utf-8") as cand_f:
+                        candidate_summary = cand_f.read()
+
+                        # ----------N-GRAM
+                        # Rouge 1
+                        start_time = time.time()
+                        rouge1_result = self._rouge1.score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
+                        duration = time.time() - start_time
+                        append_score(data, source_file=source_doc, type="N-gram", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
+
+                        # Rouge 2
+                        start_time = time.time()
+                        rouge2_result = self._rouge2.score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
+                        duration = time.time() - start_time
+                        append_score(data, source_file=source_doc, type="N-gram", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
+
+                        # ---------GRAPH
+                        start_time = time.time()
+                        autosummeng_score, memog_score, npower_score = self._npower.score(target=gold_summary_path, prediction=candidate_path)
+                        duration = time.time() - start_time
+
+                        # AutoSummENG
+                        append_score(data, source_file=source_doc, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
+
+                        # MeMoG
+                        append_score(data, source_file=source_doc, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
+
+                        # ---------META
+                        # NPowER - computed in graph methods
+                        append_score(data, source_file=source_doc, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
+
+                except FileNotFoundError as e:
+                    logger.exception(f"File not found: {e}. Skipping candidate_file: {candidate_file}.")
+                    continue
+
+            # Append results to CSV with file locking (for multiprocessing safety)
+            results_lock_path = self.results_path + "_cpu.lock"
+            try:
+                with FileLock(results_lock_path):
+                    results_df = pd.DataFrame.from_dict(data, orient="index").transpose()
+                    results_path_csv = self.results_path + ".csv"
+                    results_df.to_csv(
+                        results_path_csv,
+                        mode="a",
+                        header=not os.path.exists(results_path_csv),
+                        index=False
+                        )
+
+                # Save to checkpoint file to avoid re-evaluating
+                checkpoint_lock_path = self.checkpoint_file_cpu + ".lock"
+                with FileLock(checkpoint_lock_path):
+                    with open(self.checkpoint_file_cpu, "a") as f:
+                        f.write(f"{source_doc}\n")
+
+                logger.info(f"Evaluated {source_doc} and saved results to {results_path_csv}.")
+            except Exception as e:
+                logger.exception(f"Failed to save results for {source_doc}: {e}")
+                return
+
+        except FileNotFoundError as e:
+            logger.exception(f"File not found: {e}. Skipping source_doc: {source_doc}.")
+            return
+
+        with open(self.checkpoint_file_cpu, "r") as f:
+            evaluated_docs = f.read().splitlines()
+        logger.info(f"Evaluated documents: {len(evaluated_docs)} ({len(evaluated_docs)/len(self.source_docs):.2%}).")
+
+        # Clean up checkpoint file
+        if os.path.exists(self.checkpoint_file_cpu):
+            os.remove(self.checkpoint_file_cpu)
+
+        logger.info(f"Summary evaluation completed for document {source_doc}.")
+
+    def evaluate_summaries_gpu_batch(self, source_doc: str, batch_size: int):
+        logger.info(f"Evaluating source document: {source_doc}")
+        gold_summary_path = os.path.join(self.gold_dir, f"{source_doc}{SUMMARY_VER}{FILE_EXTENSION}")
+
+        try:
+            with open(gold_summary_path, mode="r", encoding="utf-8") as gold_f:
+                gold_summary = gold_f.read()
+
             data = {
                 "source_doc": [],
                 "eval_type": [],
@@ -70,126 +184,68 @@ class SummaryEvaluator:
                 "score": [],
                 "duration": []
             }
+            candidate_summaries = get_candidate_filenames(self, source_doc)
+
+            for i in range(0, len(candidate_summaries), batch_size):
+                batch_files = candidate_summaries[i:i+batch_size]
+                batch = load_candidate_texts(self, source_doc, batch_files)
+                variants = [v for v, _ in batch]
+                texts = [t for _, t in batch]
+
+                # BERTScore batch
+                start = time.time()
+                _, _, f1_scores = self._bertscore.score(texts, [gold_summary]*len(texts))
+                duration = time.time() - start
+                for variant, score in zip(variants, f1_scores):
+                    append_score(data, source_file=source_doc, type="Embeddings-based", method="BERTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
+
+                if LANGUAGE_CODE == "en":
+                    # BARTScore batch
+                    start = time.time()
+                    bart_scores = self._bartscore.score(texts, [gold_summary]*len(texts), batch_size=batch_size)
+                    duration = time.time() - start
+                    for variant, score in zip(variants, bart_scores):
+                        append_score(data, source_file=source_doc, type="Embeddings-based", method="BARTScore", candidate_variant=variant, result=score, duration=duration/len(batch))
+
+                    # BLEURT batch
+                    start = time.time()
+                    bleurt_scores = self._bleurt.score(references=[gold_summary]*len(texts), candidates=texts)
+                    duration = time.time() - start
+                    for variant, score in zip(variants, bleurt_scores):
+                        append_score(data, source_file=source_doc, type="Embeddings-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
+
+            results_lock_path = self.results_path + "_gpu.lock"
+            checkpoint_lock_path = self.checkpoint_file_gpu + ".lock"
+
             try:
-                with open(source_path, mode="r", encoding="utf-8") as gold_f:
-                    gold_summary = gold_f.read()
+                with FileLock(results_lock_path):
+                    results_df = pd.DataFrame.from_dict(data, orient="index").transpose()
+                    results_path_csv = self.results_path + ".csv"
+                    results_df.to_csv(
+                        results_path_csv,
+                        mode="a",
+                        header=not os.path.exists(results_path_csv),
+                        index=False
+                    )
 
-                # Actual candidate summaries
-                candidate_summaries = [doc for doc in os.listdir(self.candidate_dir) if doc.startswith(f"{source_file}_")]
+                with FileLock(checkpoint_lock_path):
+                    with open(self.checkpoint_file_gpu, "a") as f:
+                        f.write(f"{source_doc}\n")
 
-                # 10 randoms
-                other_summaries = [doc for doc in os.listdir(self.gold_dir) if not doc.startswith(f"{source_file}_") and doc.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}")]
-                candidate_summaries.extend(other_summaries[:10])
+                logger.info(f"Evaluated {source_doc} (GPU) and saved results to {results_path_csv}.")
+            except Exception as e:
+                logger.exception(f"Failed to save GPU results for {source_doc}: {e}")
 
-                # Source summary
-                candidate_summaries.insert(0, source_file)
+        except FileNotFoundError as e:
+            logger.exception(f"File not found: {e}. Skipping source_doc: {source_doc}.")
+            return
 
-                for candidate_file in candidate_summaries:
-                    logger.info(f"Evaluating candidate summary: {candidate_file}")
-                    # Source
-                    if candidate_file == source_file:
-                        candidate_path = os.path.join(self.gold_dir, f"{candidate_file}{SUMMARY_VER}{FILE_EXTENSION}")
-                        candidate_variant = "source"
-                    # Other (gold) summaries
-                    elif candidate_file.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}"):
-                        candidate_path = os.path.join(self.gold_dir, candidate_file)
-                        candidate_variant = candidate_file.removesuffix(f"{FILE_EXTENSION}")
-                    # Candidate / Destroyed summaries
-                    else:
-                        candidate_path = os.path.join(self.candidate_dir, candidate_file)
-                        candidate_variant = candidate_file.removeprefix(f"{source_file}_").removesuffix(f"{FILE_EXTENSION}")
-
-                    try:
-                        with open(candidate_path, mode="r", encoding="utf-8") as cand_f:
-                            candidate_summary = cand_f.read()
-
-                            # ----------N-GRAM
-                            # Rouge 1
-                            start_time = time.time()
-                            rouge1_result = rouge1.score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
-                            duration = time.time() - start_time
-                            append_score(data, source_file=source_file, type="N-gram", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
-
-                            # Rouge 2
-                            start_time = time.time()
-                            rouge2_result = rouge2.score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
-                            duration = time.time() - start_time
-                            append_score(data, source_file=source_file, type="N-gram", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
-
-                            # ---------GRAPH
-                            start_time = time.time()
-                            autosummeng_score, memog_score, npower_score = npower.score(target=source_path, prediction=candidate_path)
-                            duration = time.time() - start_time
-
-                            # AutoSummENG
-                            append_score(data, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
-
-                            # MeMoG
-                            append_score(data, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
-
-                            # ---------META
-                            # NPowER - computed in graph methods
-                            append_score(data, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
-
-                            # ---------EMBEDDINGS-BASED
-                            # BERTScore
-                            start_time = time.time()
-                            P, R, F1 = bertscore.score([candidate_summary], [gold_summary])
-                            duration = time.time() - start_time
-                            append_score(data, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=candidate_variant, result=float(F1), duration=duration)
-
-                            if LANGUAGE_CODE == "en":
-
-                                # BARTscore
-                                start_time = time.time()
-                                bartscore_result = bartscore.score([candidate_summary], [gold_summary], batch_size=4)
-                                duration = time.time() - start_time
-                                append_score(data, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=candidate_variant, result=bartscore_result[0], duration=duration)
-
-                                # Bleurt
-                                start_time = time.time()
-                                bleurt_result = bleurt.score(references=[gold_summary], candidates=[candidate_summary])
-                                duration = time.time() - start_time
-                                append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=candidate_variant, result=bleurt_result[0], duration=duration)
-
-                    except FileNotFoundError as e:
-                        logger.exception(f"File not found: {e}. Skipping candidate_file: {candidate_file}.")
-                        continue
-
-                # Append results to CSV with file locking (for multiprocessing safety)
-                results_lock_path = self.results_path + ".lock"
-                try:
-                    with FileLock(results_lock_path):
-                        results_df = pd.DataFrame.from_dict(data, orient="index").transpose()
-                        results_path_csv = self.results_path + ".csv"
-                        results_df.to_csv(
-                            results_path_csv,
-                            mode="a",
-                            header=not os.path.exists(results_path_csv),
-                            index=False
-                            )
-
-                    # Save to checkpoint file to avoid re-evaluating
-                    checkpoint_lock_path = self.checkpoint_file + ".lock"
-                    with FileLock(checkpoint_lock_path):
-                        with open(self.checkpoint_file, "a") as f:
-                            f.write(f"{source_file}\n")
-
-                    logger.info(f"Evaluated {source_file} and saved results to {results_path_csv}.")
-                except Exception as e:
-                    logger.exception(f"Failed to save results for {source_file}: {e}")
-                    continue
-
-            except FileNotFoundError as e:
-                logger.exception(f"File not found: {e}. Skipping source_doc: {source_file}.")
-                continue
-
-        with open(self.checkpoint_file, "r") as f:
+        with open(self.checkpoint_file_gpu, "r") as f:
             evaluated_docs = f.read().splitlines()
         logger.info(f"Evaluated documents: {len(evaluated_docs)} ({len(evaluated_docs)/len(self.source_docs):.2%}).")
 
         # Clean up checkpoint file
-        if os.path.exists(self.checkpoint_file):
-            os.remove(self.checkpoint_file)
+        if os.path.exists(self.checkpoint_file_gpu):
+            os.remove(self.checkpoint_file_gpu)
 
-        logger.info("Summary evaluation completed.")
+        logger.info(f"Summary evaluation completed for document {source_doc}.")
