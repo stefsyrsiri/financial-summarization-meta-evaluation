@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
 from argparse import ArgumentParser
 from dotenv import load_dotenv
 from loguru import logger
+from random import sample  # sampling without replacement
 from transformers.utils import logging as hf_logging
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
@@ -59,10 +60,28 @@ def main():
     parser.add_argument("--evaluate", action="store_true", help="Evaluate summaries")
     parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation")
     parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation")
+    parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation")
     parser.add_argument("--all", action="store_true", help="Run all steps")
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
+
+    # Sampling for English docs
+    if LANGUAGE == "English":
+
+        # Get existing samples
+        if os.path.exists("results/sampling.txt"):
+            with open("results/sampling.txt", "r") as f:
+                source_docs = list(set(f.read().splitlines()))  # Distinct docs to avoid duplicates
+                logger.info(f"Found {len(source_docs)} sampled documents in results/sampling.txt.")
+        # Sample documents if not already sampled
+        else:
+            for _ in range(5):  # 5 Samples to avoid bias
+                sampled_docs = sample(source_docs, 182)
+                with open("results/sampling.txt", "a") as f:
+                    for doc in sampled_docs:
+                        f.write(f"{doc}\n")
+
     logger.info(f"Running process on {len(source_docs)} annual reports.")
     logger.debug(f"Source documents: {source_docs}")
 
@@ -81,9 +100,11 @@ def main():
     if args.evaluate or args.all:
         evaluate_summaries(
             source_docs=source_docs,
+            source_dir=ANNUAL_REPORTS_DIR,
             gold_summaries_dir=GOLD_SUMMARIES_DIR,
             candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
             results_path=RESULTS_PATH,
+            no_refs=args.no_refs,
             run_cpu=args.cpu or (not args.cpu and not args.gpu),
             run_gpu=args.gpu or (not args.cpu and not args.gpu)
         )
