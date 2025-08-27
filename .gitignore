@@ -28,3 +28,5 @@ src/modules/summary_evaluator_old.py
 # Notebooks
 notebooks/playground.ipynb
 
+# Configs
+.vscode/launch.json
