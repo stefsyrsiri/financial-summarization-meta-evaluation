@@ -33,23 +33,24 @@ def run_cpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, re
     )
 
 
-def run_gpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path, batch_size=BATCH_SIZE):
+def run_gpu_metrics(source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs, batch_size=BATCH_SIZE):
     logger.info(f"Starting GPU-bound evaluation with batch size {batch_size}.")
     evaluator = SummaryEvaluator(
         source_docs=source_docs,
+        source_dir=source_dir,
         gold_dir=gold_summaries_dir,
         candidate_dir=candidate_summaries_dir,
         results_path=results_path
     )
     for doc in tqdm(source_docs, desc="Processing documents"):
-        evaluator.evaluate_summaries_gpu_batch(source_doc=doc, batch_size=batch_size)
+        evaluator.evaluate_summaries_gpu_batch(source_file=doc, batch_size=batch_size, no_refs=no_refs)
         logger.info(f"Finished GPU-bound evaluation for {doc}")
 
 
-def evaluate_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path, run_cpu=True, run_gpu=True):
+def evaluate_summaries(source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs, run_cpu=True, run_gpu=True):
     logger.info("Starting evaluation pipeline")
     if run_cpu:
         run_cpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path)
     if run_gpu:
-        run_gpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path)
+        run_gpu_metrics(source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs)
     logger.info("Evaluation pipeline finished")
