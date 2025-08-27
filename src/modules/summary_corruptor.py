@@ -10,7 +10,7 @@ This module provides tools that destroy summaries by:
 
 import math
 import os
-from random import choice, sample  # sampling without replacement
+from random import choice, sample  # choice (with replacement), sample (without replacement)
 
 from dotenv import load_dotenv
 from loguru import logger
