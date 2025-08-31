@@ -161,13 +161,8 @@ class SummaryEvaluator:
             logger.exception(f"File not found: {e}. Skipping source_doc: {source_file}.")
             return
 
-        with open(self.checkpoint_file_cpu, "r") as f:
-            evaluated_docs = f.read().splitlines()
-        logger.info(f"Evaluated documents: {len(evaluated_docs)} ({len(evaluated_docs)/len(self.source_docs):.2%}).")
-
-        # Clean up checkpoint file
-        if os.path.exists(self.checkpoint_file_cpu):
-            os.remove(self.checkpoint_file_cpu)
+        if source_file == self.source_docs[-1] and os.path.exists(self.checkpoint_file_cpu):
+                os.remove(self.checkpoint_file_cpu)
 
         logger.info(f"Summary evaluation completed for document {source_file}.")
 
@@ -256,12 +251,6 @@ class SummaryEvaluator:
             logger.exception(f"File not found: {e}. Skipping source_file: {source_file}.")
             return
 
-        with open(self.checkpoint_file_gpu, "r") as f:
-            evaluated_docs = f.read().splitlines()
-        logger.info(f"Evaluated documents: {len(evaluated_docs)} ({len(evaluated_docs)/len(self.source_docs):.2%}).")
-
-        # Clean up checkpoint file
-        if os.path.exists(self.checkpoint_file_gpu):
+        if source_file == self.source_docs[-1] and os.path.exists(self.checkpoint_file_gpu):
             os.remove(self.checkpoint_file_gpu)
-
         logger.info(f"Summary evaluation completed for document {source_file}.")
