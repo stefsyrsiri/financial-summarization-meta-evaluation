@@ -6,7 +6,6 @@ and SummaryEvaluator classes to collect the Greek data, generates new noisy
 summaries based on the Greek data and evaluates them against their original
 version.
 """
-
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # TensorFlow suppress info/warning
 import sys
@@ -20,13 +19,13 @@ warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
 from argparse import ArgumentParser
 from dotenv import load_dotenv
 from loguru import logger
-from random import sample  # sampling without replacement
 from transformers.utils import logging as hf_logging
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
 from src.pipelines.collect import collect_data
 from src.pipelines.generate import generate_noisy_summaries
 from src.pipelines.evaluate import evaluate_summaries
+from src.utils.sampling import get_sample_docs
 
 
 load_dotenv(override=True)
@@ -37,6 +36,9 @@ CANDIDATE_SUMMARIES_DIR = os.getenv("CANDIDATE_SUMMARIES_DIR")
 RESULTS_PATH = os.getenv("RESULTS_PATH")
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
+N_SAMPLES = int(os.getenv("N_SAMPLES", 5))
+SAMPLE_DOCS_PATH = os.getenv("SAMPLE_DOCS_PATH")
+SEEDS_PATH = os.getenv("SEEDS_PATH")
 
 # Silence the logger
 logger.remove()
@@ -55,12 +57,20 @@ def main():
     parser = ArgumentParser(description="Run pipeline steps.")
 
     # Parse args
+    # Data collection
     parser.add_argument("--collect", action="store_true", help="Collect data")
+
+    # Noisy summaries generation
     parser.add_argument("--generate", action="store_true", help="Generate noisy summaries")
+    parser.add_argument("--truncate", action="store_true", help="Truncate long documents")
+
+    # Evaluation
     parser.add_argument("--evaluate", action="store_true", help="Evaluate summaries")
     parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation")
     parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation")
     parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation")
+
+    # Run all steps
     parser.add_argument("--all", action="store_true", help="Run all steps")
 
     # Subset of the source documents
@@ -68,19 +78,7 @@ def main():
 
     # Sampling for English docs
     if LANGUAGE == "English":
-
-        # Get existing samples
-        if os.path.exists("results/sampling.txt"):
-            with open("results/sampling.txt", "r") as f:
-                source_docs = list(set(f.read().splitlines()))  # Distinct docs to avoid duplicates
-                logger.info(f"Found {len(source_docs)} sampled documents in results/sampling.txt.")
-        # Sample documents if not already sampled
-        else:
-            for _ in range(5):  # 5 Samples to avoid bias
-                sampled_docs = sample(source_docs, 182)
-                with open("results/sampling.txt", "a") as f:
-                    for doc in sampled_docs:
-                        f.write(f"{doc}\n")
+        source_docs = get_sample_docs(source_docs, N_SAMPLES, SAMPLE_DOCS_PATH, SEEDS_PATH)
 
     logger.info(f"Running process on {len(source_docs)} annual reports.")
     logger.debug(f"Source documents: {source_docs}")
@@ -95,7 +93,8 @@ def main():
             gold_summaries_dir=GOLD_SUMMARIES_DIR,
             candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
             summary_ver=SUMMARY_VER,
-            file_extension=FILE_EXTENSION
+            file_extension=FILE_EXTENSION,
+            truncate_for_bert=args.truncate
             )
     if args.evaluate or args.all:
         evaluate_summaries(
