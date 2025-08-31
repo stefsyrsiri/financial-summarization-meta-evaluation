@@ -8,7 +8,7 @@ from modules.summary_corruptor import SummaryCorruptor
 from modules.summary_generator import SummaryGenerator
 
 
-def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir, summary_ver, file_extension):
+def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir, summary_ver, file_extension, truncate_for_bert):
     """Generate noisy summaries from the gold summaries.
 
     Args:
@@ -21,16 +21,25 @@ def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summarie
     logger.info("Generating candidate summaries from gold summaries.")
 
     # Noisy summaries
-    summary_generator = SummaryGenerator(source_docs=source_docs, gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, )
+    if not os.path.isdir(candidate_summaries_dir):
+        os.makedirs(candidate_summaries_dir, exist_ok=True)
+
+    summary_generator = SummaryGenerator(source_docs=source_docs, gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, truncate_for_bert=truncate_for_bert)
 
     for doc in tqdm(source_docs, desc="Processing documents"):
         logger.info(f"Processing annual report '{doc}' for noisy summary generation.")
-        try:
-            with open(file=os.path.join(gold_summaries_dir, f"{doc}{summary_ver}{file_extension}"), mode="r", encoding="utf-8") as file:
-                gold_summary = file.read()
+        gold_summary_path = os.path.join(gold_summaries_dir, f"{doc}{summary_ver}{file_extension}")
+        if not os.path.exists(gold_summary_path):
+            logger.warning(f"File not found for {doc}, skipping.")
+            continue
+        with open(file=gold_summary_path, mode="r", encoding="utf-8") as file:
+            gold_summary = file.read()
+            if gold_summary.strip() == "":
+                continue
 
-            # Summary Destruction
-            corruptor = SummaryCorruptor(input_summary=gold_summary, noise_percentage=0.9)
+        # Summary Destruction
+        try:
+            corruptor = SummaryCorruptor(input_summary=gold_summary, noise_percentage=0.9, truncate_for_bert=truncate_for_bert)
 
             # Summary Generation
             percentages = np.round(np.linspace(0.9, 0.1, num=5), 1).tolist()

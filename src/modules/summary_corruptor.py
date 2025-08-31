@@ -14,6 +14,7 @@ from random import choice, sample  # choice (with replacement), sample (without 
 
 from dotenv import load_dotenv
 from loguru import logger
+from transformers import BertTokenizer
 
 from src.utils.summary_corruptor_utils import get_swap_indices
 from src.modules.tokenizer import Tokenizer
@@ -47,9 +48,12 @@ class SummaryCorruptor:
         self.input_summary = input_summary
         self.truncate_for_bert = truncate_for_bert
         self.nlp = Tokenizer(lang_code=language)
+        self.bert_tokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
         if truncate_for_bert:
-            # Truncate the summary to 350 spaCy tokens for BERT
-            self.words = self.nlp.tokenize(self.input_summary)[:350]
+            # Truncate the summary to 512 BERT tokens
+            bert_tokens = self.bert_tokenizer.encode(self.input_summary, add_special_tokens=True, max_length=512, truncation=True)
+            truncated_summary = self.bert_tokenizer.decode(bert_tokens, skip_special_tokens=True)
+            self.words = self.nlp.tokenize(truncated_summary)
             self.sentences = self.nlp.sentencize(" ".join(self.words))
         else:
             self.words = self.nlp.tokenize(self.input_summary)
@@ -64,7 +68,7 @@ class SummaryCorruptor:
         self._random_sentences = None
         self._repeated_sentence = None
 
-        logger.info(f"SummaryCorruptor initialized with {self.noise_percentage:.0%} noise.")
+        logger.debug(f"SummaryCorruptor initialized with {self.noise_percentage:.0%} noise.")
         logger.debug(f"Tokens: {len(self.words)}")
         logger.debug(f"Sentences: {len(self.sentences)}")
 
@@ -76,7 +80,7 @@ class SummaryCorruptor:
     def noise_percentage(self, new_percentage: float):
         if isinstance(new_percentage, float) and 0 < new_percentage < 1:
             self._noise_percentage = new_percentage
-            logger.info(f"SummaryCorruptor's noise percentage was changed to {self.noise_percentage:.0%}.")
+            logger.debug(f"SummaryCorruptor's noise percentage was changed to {self.noise_percentage:.0%}.")
 
     @property
     def random_swap_word_indices(self):
@@ -282,14 +286,19 @@ class SummaryCorruptor:
 
         # Choose another summary
         if self.random_summary is None:
-            remaining_summaries = [doc for doc in source_docs if doc != target]
-            rand_summary = choice(remaining_summaries)
+            not_found = True
+            while not_found:
+                remaining_summaries = [doc for doc in source_docs if doc != target]
+                rand_summary = choice(remaining_summaries)
+                rand_summary_path = os.path.join(gold_dir, f"{rand_summary}{SUMMARY_VER}{FILE_EXTENSION}")
+                if os.path.exists(rand_summary_path):
+                    not_found = False
         else:
             rand_summary = self.random_summary
         logger.debug(f"Random summary: {rand_summary}")
 
         # Choose a sentence from the randomly picked summary to insert to the original one
-        with open(os.path.join(gold_dir, f"{rand_summary}{SUMMARY_VER}{FILE_EXTENSION}"), mode="r", encoding="utf-8") as file:
+        with open(rand_summary_path, mode="r", encoding="utf-8") as file:
             rand_gold_summary = file.read()
             rand_sentences = self.nlp.sentencize(rand_gold_summary)
             rand_sentence_len = len(rand_sentences)

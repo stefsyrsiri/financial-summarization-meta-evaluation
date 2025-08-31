@@ -20,7 +20,8 @@ class SummaryGenerator:
             self,
             source_docs: list,
             gold_dir: str,
-            candidate_dir: str
+            candidate_dir: str,
+            truncate_for_bert: bool
             ):
         """Constructs candidate summaries.
 
@@ -33,6 +34,7 @@ class SummaryGenerator:
         self.source_docs = source_docs
         self.gold_dir = gold_dir
         self.candidate_dir = candidate_dir
+        self.truncate_for_bert = truncate_for_bert
 
     def generate_noisy_summaries(
             self,
@@ -47,7 +49,7 @@ class SummaryGenerator:
             corruptor (SummaryCorruptor): An object with summary destructive methods.
 
         """
-        logger.info(f"Generating noisy summaries for {doc_id}...")
+        logger.debug(f"Generating noisy summaries for {doc_id}...")
 
         try:
             noisy_summaries = {
@@ -63,7 +65,7 @@ class SummaryGenerator:
                 file_path = os.path.join(self.candidate_dir, f"{doc_id}_{summary_type}{FILE_EXTENSION}")
                 with open(file_path, mode="w", encoding="utf-8") as file:
                     file.write(summary_content)
-                logger.info(f"Saved {summary_type} summary for {doc_id} to {file_path}.")
+            logger.debug(f"Saved {summary_type} for {doc_id} to {file_path}.")
 
         except Exception as e:
             logger.exception(f"Failed to generate noisy summaries for {doc_id}: {e}")
