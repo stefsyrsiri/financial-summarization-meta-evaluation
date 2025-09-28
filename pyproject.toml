@@ -1,0 +1,39 @@
+[project]
+name = "thesis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "bert-score>=0.3.13",
+    "dotenv>=0.9.9",
+    "el-core-news-sm",
+    "en-core-web-sm",
+    "es-core-news-sm",
+    "ipykernel>=6.30.1",
+    "loguru>=0.7.3",
+    "longdocfactscore>=1.0.0",
+    "numpy<2",
+    "pandas>=2.3.2",
+    "pyarrow>=21.0.0",
+    "rouge-score>=0.1.2",
+    "seaborn>=0.13.2",
+    "spacy>=3.8.7",
+    "summac>=0.0.4",
+]
+
+[dependency-groups]
+dev = [
+    "torch==2.4.0",
+]
+
+[tool.uv.sources]
+el-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/el_core_news_sm-3.8.0/el_core_news_sm-3.8.0-py3-none-any.whl" }
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+es-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl" }
+torch = { index = "pytorch-cu124" }
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
