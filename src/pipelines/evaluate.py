@@ -1,5 +1,6 @@
 import os
 
+import torch
 from dotenv import load_dotenv
 from joblib import Parallel, delayed
 from loguru import logger
@@ -52,5 +53,7 @@ def evaluate_summaries(source_docs, source_dir, gold_summaries_dir, candidate_su
     if run_cpu:
         run_cpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path)
     if run_gpu:
+        if not torch.cuda.is_available():
+            logger.warning("No GPU available. Using CPU.")
         run_gpu_metrics(source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs)
     logger.info("Evaluation pipeline finished")

@@ -1,13 +1,14 @@
 import os
 import json
 import random
+from typing import Optional
 from loguru import logger
 
 def get_sample_docs(
-        source_docs:list,
-        n_samples:int,
         sample_docs_path:str = "results/sampling.txt",
-        seeds_path:str = "results/seeds.json"
+        seeds_path:str = "results/seeds.json",
+        source_docs:Optional[list] = None,
+        n_samples:Optional[int] = None,
         ) -> list:
 
     """Get a list of sampled documents.

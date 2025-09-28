@@ -16,11 +16,8 @@ df.parquet
 
 # Source code files to ignore
 src/sentence_splitter.py
-src/modules/summary_evaluator_optimized.py
-src/pipelines/evaluate_optimized.py
 watchdog.py
 batch_times.txt
-src/modules/summary_evaluator_old.py
 
 # Evaluation methods
 /evaluation_methods
