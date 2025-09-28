@@ -9,10 +9,12 @@ from dotenv import load_dotenv
 from loguru import logger
 from longdocfactscore.ldfacts import LongDocFACTScore
 from rouge_score.rouge_scorer import RougeScorer
+from summac.model_summac import SummaCZS
 
 from evaluation_methods.BARTScore.bart_score import BARTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
 from evaluation_methods.NPowERV1 import npower
+from evaluation_methods.FactCC.factcc import batched_FactCC
 from src.utils.summary_evaluator_utils import (
     get_candidate_filenames,
     get_candidate_metadata,
@@ -36,6 +38,7 @@ if LANGUAGE_CODE == "en":
     bartscore = BARTScorer(device=device, checkpoint="facebook/bart-large-cnn")
     ldfact_score = LongDocFACTScore(device=device)
     bleurt = BleurtScorer(checkpoint="evaluation_methods/Bleurt/bleurt/BLEURT-20")
+    summaczs = SummaCZS(granularity="sentence", model_name="vitc", device=device)
 
 
 class SummaryEvaluator:
@@ -73,6 +76,8 @@ class SummaryEvaluator:
         self._bartscore = bartscore if LANGUAGE_CODE == "en" else None
         self._ldfact_score = ldfact_score if LANGUAGE_CODE == "en" else None
         self._bleurt = bleurt if LANGUAGE_CODE == "en" else None
+        self._factcc = batched_FactCC if LANGUAGE_CODE == "en" else None
+        self._summaczs = summaczs if LANGUAGE_CODE == "en" else None
 
         logger.info(f"SummaryEvaluator initialized. Source docs: {len(self.source_docs)}, Already evaluated: {len(self._evaluated_docs_cpu)} (CPU), {len(self._evaluated_docs_gpu)} (GPU).")
 
@@ -198,7 +203,7 @@ class SummaryEvaluator:
                 if no_refs:
                     # LongDocFACTScore batch
                     start = time.time()
-                    ldfact_score_scores = self._ldfact_score.score_src_hyp_long([source_doc]*len(texts), texts)
+                    ldfact_score_scores = self._ldfact_score.score_src_hyp_long(srcs=[source_doc]*len(texts), hyps=texts)
                     duration = time.time() - start
                     for variant, score in zip(variants, ldfact_score_scores):
                         append_score(data, source_file=source_file, type="Embeddings-based", method="LongDocFACTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
@@ -224,6 +229,20 @@ class SummaryEvaluator:
                         duration = time.time() - start
                         for variant, score in zip(variants, bleurt_scores):
                             append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
+
+                        # FactCC batch
+                        start = time.time()
+                        factcc_logits, factcc_preds, factcc_probs = self._factcc(source_docs=[gold_summary]*len(texts), summaries=texts, batch_size=batch_size)
+                        duration = time.time() - start
+                        for variant, _, _, prob in zip(variants, factcc_logits, factcc_preds, factcc_probs):
+                            append_score(data, source_file=source_file, type="Embeddings-based", method="FactCC", candidate_variant=variant, result=prob, duration=duration/len(batch))
+
+                        # SummacZS batch
+                        start = time.time()
+                        summaczs_scores = self._summaczs.score(sources=[gold_summary]*len(texts), generateds=texts, batch_size=batch_size)["scores"]
+                        duration = time.time() - start
+                        for variant, score in zip(variants, summaczs_scores):
+                            append_score(data, source_file=source_file, type="Embeddings-based", method="SummaCZS", candidate_variant=variant, result=score, duration=duration/len(batch))
 
             results_lock_path = self.results_path + "_gpu.lock"
             checkpoint_lock_path = self.checkpoint_file_gpu + ".lock"
