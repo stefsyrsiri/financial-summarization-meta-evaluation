@@ -78,7 +78,13 @@ def main():
 
     # Sampling for English docs
     if LANGUAGE == "English":
-        source_docs = get_sample_docs(source_docs, N_SAMPLES, SAMPLE_DOCS_PATH, SEEDS_PATH)
+        logger.debug(f"Main path: {SAMPLE_DOCS_PATH}")
+        source_docs = get_sample_docs(
+            sample_docs_path=SAMPLE_DOCS_PATH,
+            seeds_path=SEEDS_PATH,
+            source_docs=source_docs,
+            n_samples=N_SAMPLES,
+            )
 
     logger.info(f"Running process on {len(source_docs)} annual reports.")
     logger.debug(f"Source documents: {source_docs}")
