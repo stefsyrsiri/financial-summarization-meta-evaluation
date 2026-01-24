@@ -37,7 +37,7 @@ RESULTS_PATH = os.getenv("RESULTS_PATH")
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 N_SAMPLES = int(os.getenv("N_SAMPLES", 5))
-SAMPLE_DOCS_PATH = os.getenv("SAMPLE_DOCS_PATH")
+SAMPLED_DOCS_PATH = os.getenv("SAMPLED_DOCS_PATH")
 SEEDS_PATH = os.getenv("SEEDS_PATH")
 
 # Silence the logger
@@ -78,9 +78,9 @@ def main():
 
     # Sampling for English docs
     if LANGUAGE == "English":
-        logger.debug(f"Main path: {SAMPLE_DOCS_PATH}")
+        logger.debug(f"Main path: {SAMPLED_DOCS_PATH}")
         source_docs = get_sample_docs(
-            sample_docs_path=SAMPLE_DOCS_PATH,
+            sampled_docs_path=SAMPLED_DOCS_PATH,
             seeds_path=SEEDS_PATH,
             source_docs=source_docs,
             n_samples=N_SAMPLES,

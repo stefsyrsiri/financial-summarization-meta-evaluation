@@ -5,7 +5,7 @@ from typing import Optional
 from loguru import logger
 
 def get_sample_docs(
-        sample_docs_path:str = "results/sampling.txt",
+        sampled_docs_path:str = "results/sampling.txt",
         seeds_path:str = "results/seeds.json",
         source_docs:Optional[list] = None,
         n_samples:Optional[int] = None,
@@ -19,18 +19,18 @@ def get_sample_docs(
     Args:
         source_docs (list): The list of source documents to sample from.
         n_samples (int): The number of samples to draw.
-        sample_docs_path (str): The file path of the sampled documents.
+        sampled_docs_path (str): The file path of the sampled documents.
         seeds_path (str): The file path of the random seeds.
 
     Returns:
         list: A list of sampled documents.
     """
     # Get existing samples
-    sampling_file = sample_docs_path
-    if os.path.exists(sampling_file):
-        with open(sampling_file, "r") as f:
+    logger.debug(f"Sampling file path: {sampled_docs_path}")
+    if os.path.exists(sampled_docs_path):
+        with open(sampled_docs_path, "r") as f:
             sampled_docs = list(set(f.read().splitlines()))  # Distinct docs to avoid duplicates
-            logger.info(f"Found {len(sampled_docs)} sampled documents in {sampling_file}.")
+            logger.info(f"Found {len(sampled_docs)} sampled documents in {sampled_docs_path}.")
             return sampled_docs
     # Sample documents if not already sampled
     else:
@@ -48,7 +48,7 @@ def get_sample_docs(
         for seed in seeds:
             random.seed(seed)
             sampled_docs.extend(random.sample(source_docs, 182))  # sampling without replacement
-        with open(sampling_file, "a") as f:
+        with open(sampled_docs_path, "a") as f:
             for doc in sampled_docs:
                     f.write(f"{doc}\n")
         return list(set(sampled_docs))  # Distinct docs to avoid duplicates
