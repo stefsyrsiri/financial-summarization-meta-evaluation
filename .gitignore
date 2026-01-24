@@ -3,9 +3,10 @@ __pycache__/
 .env
 
 # Data files
-df.csv
-df.parquet
 /data
+*.csv
+*.parquet
+*.tex
 
 # Logs
 /logs
