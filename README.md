@@ -76,23 +76,46 @@ To generate and/or evaluate candidate summaries, configure the language variable
 
 The metrics used in this project are:
 
-- N-gram-based
+- `N-gram-based` - Installed with `uv`
   - Rouge1
   - Rouge2
 
-- N-gram-graph-based
+- `N-gram-graph-based` - Contact [G.Giannakopoulos](https://github.com/ggianna)
   - AutoSummENG
   - MeMoG
   - NPowER
 
-- Embeddings-based
+- `Embeddings-based` - Installed with `uv`
   - BERTScore
 
-- Model-based
-  - BARTScore
-  - Bleurt
-  - FactCC
-  - LongDocFACTScore
+- `Model-based`
+  - Cloned GH repository
+    - [BARTScore](https://github.com/neulab/BARTScore)
+    - [Bleurt](https://github.com/google-research/bleurt)
+
+  - Used through HuggingFace
+    - FactCC
+
+  - Installed with `uv`
+    - LongDocFACTScore
+
+##### Installation of BARTScore and Bleurt
+
+Create an `evaluation_methods` directory at the root.
+
+```bash
+cd thesis
+mkdir evaluation_methods
+cd evaluation_methods
+```
+
+Clone the repositories inside the `evaluation_methods` directory following the instructions of the repositories.
+
+```bash
+git clone <the-eval-metric-repo>
+```
+
+#### Setup for FactCC
 
 ## 🛠️ Installation
 
