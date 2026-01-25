@@ -140,7 +140,7 @@ git clone <the-eval-metric-repo>
 ```sh
 git clone https://github.com/stefsyrsiri/thesis.git
 cd thesis
-uv sync --lock
+uv sync --locked
 ```
 
 ## 🚀 Running the scripts
