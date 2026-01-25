@@ -1,10 +1,55 @@
 import os
+import yaml
+from typing import Dict
 
 from dotenv import load_dotenv
 
+from src.registries.metrics_registry import METRICS, METRIC_FACTORIES
+
+
 load_dotenv(override=True)
 SUMMARY_VER = os.getenv("SUMMARY_VER")
+EVALUATION_CONFIG_PATH = os.getenv("EVALUATION_CONFIG_PATH")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
+
+
+# TODO: Load cpu or gpu metrics based on the CLI command
+def load_metrics(
+        lang: str,
+        cfg_path: str=os.getenv("EVALUATION_CONFIG_PATH", "src/conf/evaluation.yaml")
+        ) -> Dict:
+    try:
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f)
+            cfg_metrics = cfg["metrics"]
+    except Exception as e:
+        raise ValueError(f"Error loading metrics config from {cfg_path}: {e}")
+
+    metrics = {}
+    multilingual = lang != "en"
+
+    for name, enabled in cfg_metrics.items():
+        # Return metrics that are enabled
+        if not enabled:
+            continue # skip disabled metrics
+
+        properties = METRICS[name]
+
+        # and match the language
+        if properties.multilingual == multilingual or lang == "en":
+            factory = METRIC_FACTORIES.get(name)
+            metrics[name] = factory(lang)
+    return metrics
+
+
+def load_checkpoint(file_path):
+    """Create checkpoint file if missing and return list of the already evaluated docs."""
+    if not os.path.exists(file_path):
+        # Create empty checkpoint file
+        with open(file_path, "w", encoding="utf-8"):
+            return []
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read().splitlines()
 
 
 def get_candidate_filenames(instance, source_doc):
