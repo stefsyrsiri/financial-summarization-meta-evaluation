@@ -23,7 +23,7 @@ def _process_doc_cpu(doc, gold_summaries_dir, candidate_summaries_dir, results_p
         candidate_dir=candidate_summaries_dir,
         results_path=results_path
     )
-    evaluator.evaluate_summaries(source_doc=doc)
+    evaluator.evaluate_summaries(source_file=doc)
     logger.info(f"Finished CPU-bound evaluation for {doc}")
 
 
