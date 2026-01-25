@@ -1,44 +1,26 @@
 import os
 import time
 from filelock import FileLock
+from statistics import harmonic_mean
 
 import pandas as pd
-import torch
-from bert_score import BERTScorer
 from dotenv import load_dotenv
 from loguru import logger
-from longdocfactscore.ldfacts import LongDocFACTScore
-from rouge_score.rouge_scorer import RougeScorer
-from summac.model_summac import SummaCZS
 
-from evaluation_methods.BARTScore.bart_score import BARTScorer
-from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
-from evaluation_methods.NPowERV1 import npower
-from evaluation_methods.FactCC.factcc import batched_FactCC
+from src.registries.languages_registry import LANGUAGES
 from src.utils.summary_evaluator_utils import (
+    load_metrics,
+    load_checkpoint,
     get_candidate_filenames,
     get_candidate_metadata,
     load_candidate_texts,
     append_score
 )
-from src.modules.tokenizer import Tokenizer
 
 load_dotenv()
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
-LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
-
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-tokenizer = Tokenizer(lang_code=LANGUAGE_CODE)
-rouge1 = RougeScorer(["rouge1"], use_stemmer=False, tokenizer=tokenizer)
-rouge2 = RougeScorer(["rouge2"], use_stemmer=False, tokenizer=tokenizer)
-bertscore = BERTScorer(lang=LANGUAGE_CODE, device=device)  # bert-base-multilingual-cased or deberta-xlarge-mnli
-
-if LANGUAGE_CODE == "en":
-    bartscore = BARTScorer(device=device, checkpoint="facebook/bart-large-cnn")
-    ldfact_score = LongDocFACTScore(device=device)
-    bleurt = BleurtScorer(checkpoint="evaluation_methods/Bleurt/bleurt/BLEURT-20")
-    summaczs = SummaCZS(granularity="sentence", model_name="vitc", device=device)
+LANGUAGE = os.getenv("LANGUAGE")
 
 
 class SummaryEvaluator:
@@ -50,36 +32,25 @@ class SummaryEvaluator:
             candidate_dir: str = os.getenv("CANDIDATE_SUMMARIES_DIR"),
             results_path: str = os.getenv("RESULTS_PATH"),
             ):
+        self.language = LANGUAGES[LANGUAGE].code
+        self.metrics = load_metrics(lang=self.language)
         self.source_docs = source_docs
         self.source_dir = source_dir
         self.gold_dir = gold_dir
         self.candidates_dir = candidate_dir
         self.results_path = results_path
-        self.checkpoint_file_cpu = self.results_path + "_checkpoint_cpu.txt"
-        if os.path.exists(self.checkpoint_file_cpu):
-            with open(self.checkpoint_file_cpu, "r") as f:
-                self._evaluated_docs_cpu = f.read().splitlines()
-                self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs_cpu]
-        else:
-            self._evaluated_docs_cpu = []
-        self.checkpoint_file_gpu = self.results_path + "_checkpoint_gpu.txt"
-        if os.path.exists(self.checkpoint_file_gpu):
-            with open(self.checkpoint_file_gpu, "r") as f:
-                self._evaluated_docs_gpu = f.read().splitlines()
-                self.source_docs = [doc for doc in self.source_docs if doc not in self._evaluated_docs_gpu]
-        else:
-            self._evaluated_docs_gpu = []
-        self._rouge1 = rouge1
-        self._rouge2 = rouge2
-        self._npower = npower
-        self._bertscore = bertscore
-        self._bartscore = bartscore if LANGUAGE_CODE == "en" else None
-        self._ldfact_score = ldfact_score if LANGUAGE_CODE == "en" else None
-        self._bleurt = bleurt if LANGUAGE_CODE == "en" else None
-        self._factcc = batched_FactCC if LANGUAGE_CODE == "en" else None
-        self._summaczs = summaczs if LANGUAGE_CODE == "en" else None
 
-        logger.info(f"SummaryEvaluator initialized. Source docs: {len(self.source_docs)}, Already evaluated: {len(self._evaluated_docs_cpu)} (CPU), {len(self._evaluated_docs_gpu)} (GPU).")
+        self.checkpoint_file_cpu = self.results_path + "_checkpoint_cpu.txt"
+        self.checkpoint_file_gpu = self.results_path + "_checkpoint_gpu.txt"
+        self._evaluated_docs_cpu = load_checkpoint(self.checkpoint_file_cpu)
+        self._evaluated_docs_gpu = load_checkpoint(self.checkpoint_file_gpu)
+
+        logger.info(
+            f"SummaryEvaluator initialized. Evaluation metrics: {self.metrics.keys()}. "
+            f"Source docs: {len(self.source_docs)}, "
+            f"Already evaluated: {len(self._evaluated_docs_cpu)} (CPU), {len(self._evaluated_docs_gpu)} (GPU)."
+            )
+
 
     def evaluate_summaries(self, source_file: str):
         logger.info(f"Evaluating source document: {source_file}")
@@ -108,31 +79,37 @@ class SummaryEvaluator:
 
                         # ----------N-GRAM
                         # Rouge 1
-                        start_time = time.time()
-                        rouge1_result = self._rouge1.score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
-                        duration = time.time() - start_time
-                        append_score(data, source_file=source_file, type="N-gram", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
+                        if "rouge1" in self.metrics:
+                            start_time = time.time()
+                            rouge1_result = self.metrics["rouge1"].score(target=gold_summary, prediction=candidate_summary)["rouge1"][2]  # 0: precision, 1: recall, 2: fmeasure
+                            duration = time.time() - start_time
+                            append_score(data, source_file=source_file, type="N-gram-based", method="Rouge1", candidate_variant=candidate_variant, result=rouge1_result, duration=duration)
 
                         # Rouge 2
-                        start_time = time.time()
-                        rouge2_result = self._rouge2.score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
-                        duration = time.time() - start_time
-                        append_score(data, source_file=source_file, type="N-gram", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
+                        if "rouge2" in self.metrics:
+                            start_time = time.time()
+                            rouge2_result = self.metrics["rouge2"].score(target=gold_summary, prediction=candidate_summary)["rouge2"][2]
+                            duration = time.time() - start_time
+                            append_score(data, source_file=source_file, type="N-gram-based", method="Rouge2", candidate_variant=candidate_variant, result=rouge2_result, duration=duration)
 
                         # ---------GRAPH
-                        start_time = time.time()
-                        autosummeng_score, memog_score, npower_score = self._npower.score(target=gold_summary_path, prediction=candidate_path)
-                        duration = time.time() - start_time
+                        if {"autosummeng", "memog", "npower"} & self.metrics.keys():
+                            start_time = time.time()
+                            autosummeng_score, memog_score, npower_score = self.metrics["npower"].score(target=gold_summary_path, prediction=candidate_path)
+                            duration = time.time() - start_time
 
-                        # AutoSummENG
-                        append_score(data, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
+                            # AutoSummENG
+                            if "autosummeng" in self.metrics:
+                                append_score(data, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
 
-                        # MeMoG
-                        append_score(data, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
+                            # MeMoG
+                            if "memog" in self.metrics:
+                                append_score(data, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
 
-                        # ---------META
-                        # NPowER - computed in graph methods
-                        append_score(data, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
+                            # ---------META
+                            # NPowER - computed in graph methods
+                            if "npower" in self.metrics:
+                                append_score(data, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
 
                 except FileNotFoundError as e:
                     logger.exception(f"File not found: {e}. Skipping candidate_file: {candidate_file}.")
@@ -171,6 +148,7 @@ class SummaryEvaluator:
 
         logger.info(f"Summary evaluation completed for document {source_file}.")
 
+
     def evaluate_summaries_gpu_batch(self, source_file: str, batch_size: int, no_refs: bool = False):
         logger.info(f"Evaluating source document: {source_file}")
 
@@ -202,47 +180,79 @@ class SummaryEvaluator:
 
                 if no_refs:
                     # LongDocFACTScore batch
-                    start = time.time()
-                    ldfact_score_scores = self._ldfact_score.score_src_hyp_long(srcs=[source_doc]*len(texts), hyps=texts)
-                    duration = time.time() - start
-                    for variant, score in zip(variants, ldfact_score_scores):
-                        append_score(data, source_file=source_file, type="Embeddings-based", method="LongDocFACTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
+                    if "ldfactscore" in self.metrics and self.language == "en":
+                        start = time.time()
+                        ldfact_score_scores = self.metrics["ldfactscore"].score_src_hyp_long(srcs=[source_doc]*len(texts), hyps=texts)
+                        duration = time.time() - start
+                        for variant, score in zip(variants, ldfact_score_scores):
+                            append_score(data, source_file=source_file, type="Model-based", method="LongDocFACTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
                 else:
                     # BERTScore batch
-                    start = time.time()
-                    _, _, f1_scores = self._bertscore.score(texts, [gold_summary]*len(texts))
-                    duration = time.time() - start
-                    for variant, score in zip(variants, f1_scores):
-                        append_score(data, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
-
-                    if LANGUAGE_CODE == "en":
-                        # BARTScore batch
+                    if "bertscore" in self.metrics:
                         start = time.time()
-                        bart_scores = self._bartscore.score(texts, [gold_summary]*len(texts), batch_size=batch_size)
+                        _, _, f1_scores = self.metrics["bertscore"].score(texts, [gold_summary]*len(texts))
                         duration = time.time() - start
-                        for variant, score in zip(variants, bart_scores):
-                            append_score(data, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=variant, result=score, duration=duration/len(batch))
+                        for variant, score in zip(variants, f1_scores):
+                            append_score(data, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
+
+                    # # BRUGEscore batch
+                    # start = time.time()
+
+                    # # --- ROUGE2 ---
+                    # rouge2_f1scores = []
+                    # for cand in texts:
+                    #     rouge2_f1 = self._rouge2.score(target=gold_summary, prediction=cand)["rouge2"][2]
+                    #     rouge2_f1scores.append(rouge2_f1)
+
+                    # # --- BERTScore ---
+                    # _, _, bert_f1_scores = self._bertscore.score(texts, [gold_summary] * len(texts))
+                    # bert_f1_scores = [float(s) for s in bert_f1_scores]
+
+                    # # --- Harmonic Mean (BRUGEscore) ---
+                    # bruges_scores = [
+                    #     harmonic_mean([r2, b])
+                    #     for r2, b in zip(rouge2_f1scores, bert_f1_scores)
+                    # ]
+
+                    # duration = time.time() - start
+                    # per_item_time = duration / len(texts)
+
+                    # for variant, score in zip(variants, bruges_scores):
+                    #     append_score(
+                    #         data,
+                    #         source_file=source_file,
+                    #         type="Meta",
+                    #         method="BRUGEscore",
+                    #         candidate_variant=variant,
+                    #         result=float(score),
+                    #         duration=per_item_time,
+                    #     )
+
+                    if self.language == "en":
+                        # BARTScore batch
+                        if "bartscore" in self.metrics:
+                            start = time.time()
+                            bart_scores = self.metrics["bartscore"].score(texts, [gold_summary]*len(texts), batch_size=batch_size)
+                            duration = time.time() - start
+                            for variant, score in zip(variants, bart_scores):
+                                append_score(data, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=variant, result=score, duration=duration/len(batch))
 
                         # BLEURT batch
-                        start = time.time()
-                        bleurt_scores = self._bleurt.score(references=[gold_summary]*len(texts), candidates=texts)
-                        duration = time.time() - start
-                        for variant, score in zip(variants, bleurt_scores):
-                            append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
+                        if "bleurt" in self.metrics:
+                            start = time.time()
+                            bleurt_scores = self.metrics["bleurt"].score(references=[gold_summary]*len(texts), candidates=texts)
+                            duration = time.time() - start
+                            for variant, score in zip(variants, bleurt_scores):
+                                append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
 
                         # FactCC batch
-                        start = time.time()
-                        factcc_logits, factcc_preds, factcc_probs = self._factcc(source_docs=[gold_summary]*len(texts), summaries=texts, batch_size=batch_size)
-                        duration = time.time() - start
-                        for variant, _, _, prob in zip(variants, factcc_logits, factcc_preds, factcc_probs):
-                            append_score(data, source_file=source_file, type="Embeddings-based", method="FactCC", candidate_variant=variant, result=prob, duration=duration/len(batch))
+                        if "factcc" in self.metrics:
+                            start = time.time()
+                            factcc_logits, factcc_preds, factcc_probs = self.metrics["factcc"](source_docs=[gold_summary]*len(texts), summaries=texts, batch_size=batch_size)
+                            duration = time.time() - start
+                            for variant, _, _, prob in zip(variants, factcc_logits, factcc_preds, factcc_probs):
+                                append_score(data, source_file=source_file, type="Embeddings-based", method="FactCC", candidate_variant=variant, result=prob, duration=duration/len(batch))
 
-                        # SummacZS batch
-                        start = time.time()
-                        summaczs_scores = self._summaczs.score(sources=[gold_summary]*len(texts), generateds=texts, batch_size=batch_size)["scores"]
-                        duration = time.time() - start
-                        for variant, score in zip(variants, summaczs_scores):
-                            append_score(data, source_file=source_file, type="Embeddings-based", method="SummaCZS", candidate_variant=variant, result=score, duration=duration/len(batch))
 
             results_lock_path = self.results_path + "_gpu.lock"
             checkpoint_lock_path = self.checkpoint_file_gpu + ".lock"

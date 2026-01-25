@@ -16,13 +16,14 @@ from dotenv import load_dotenv
 from loguru import logger
 from transformers import BertTokenizer
 
+from src.registries.languages_registry import LANGUAGES
 from src.utils.summary_corruptor_utils import get_swap_indices
 from src.modules.tokenizer import Tokenizer
 
 load_dotenv(override=True)
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
-LANGUAGE_CODE = os.getenv("LANGUAGE_CODE")
+LANGUAGE = os.getenv("LANGUAGE")
 
 
 class SummaryCorruptor:
@@ -30,7 +31,7 @@ class SummaryCorruptor:
             self,
             input_summary: str,
             noise_percentage: float,
-            language: str = LANGUAGE_CODE,
+            language: str = LANGUAGES[LANGUAGE].code,
             truncate_for_bert: bool = False
             ):
         """Makes summaries noisy.
