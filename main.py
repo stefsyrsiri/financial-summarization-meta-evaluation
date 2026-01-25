@@ -6,6 +6,7 @@ and SummaryEvaluator classes to collect the Greek data, generates new noisy
 summaries based on the Greek data and evaluates them against their original
 version.
 """
+
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # TensorFlow suppress info/warning
 import sys
@@ -70,6 +71,9 @@ def main():
     parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation")
     parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation")
 
+    # Subset
+    parser.add_argument("--subset", type=int, help="Subset of source documents to process")
+
     # Run all steps
     parser.add_argument("--all", action="store_true", help="Run all steps")
 
@@ -86,10 +90,10 @@ def main():
             n_samples=N_SAMPLES,
             )
 
+    args = parser.parse_args()
+    source_docs = source_docs[:args.subset] if args.subset else source_docs
     logger.info(f"Running process on {len(source_docs)} annual reports.")
     logger.debug(f"Source documents: {source_docs}")
-
-    args = parser.parse_args()
 
     if args.collect or args.all:
         collect_data()
