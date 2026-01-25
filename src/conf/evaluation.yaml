@@ -1,0 +1,16 @@
+# Toggle metrics to use them (true/false).
+# Do NOT delete entries
+
+metrics:
+# CPU
+  rouge1: false
+  rouge2: false
+  autosummeng: true
+  memog: true
+  npower: true
+# GPU
+  bertscore: true
+  bartscore: true
+  bleurt: true
+  factcc: true
+  ldfactscore: true
