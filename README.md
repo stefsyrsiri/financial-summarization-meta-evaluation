@@ -10,10 +10,33 @@ In this project we evaluate evaluation methods for automatic summarization on lo
 ## Table of Contents
 
 - [Overview](#-overview)
+- [Features](#features)
 - [Project structure](#️-project-structure)
 - [Requirements](#requirements)
 - [Installation](#️-installation)
 - [Running the scripts](#-running-the-scripts)
+
+## Features
+
+### Data collection
+
+This project uses 3 datasets of annual reports and their (gold) summaries.
+
+- English
+- Greek
+- Spanish
+
+Due to access limitations a script has been added to download the Greek dataset that is publicly available.
+
+To get the Greek dataset [run the data collection script](#-running-the-scripts).
+
+### Generation of noisy candidate summaries
+
+To create noisy summaries from existing ones [run the summary corruption script](#-running-the-scripts).
+
+### Summary evaluation
+
+To evaluate your summaries [run the summary evaluation script](#-running-the-scripts).
 
 ## 🗂️ Project structure
 
@@ -53,11 +76,7 @@ This project uses `uv` for its dependencies. Follow the official [installation i
 
 A `data` directory at the root is needed.
 
-If you don't have a dataset available, you can run the following to collect a dataset of Greek annual reports and their gold summaries:
-
-```sh
-uv run main.py --collect
-```
+If you don't have a dataset available, you can [run the data collection script](#-running-the-scripts) to get a dataset of Greek annual reports and their gold summaries
 
 #### Environment variables
 
@@ -66,7 +85,6 @@ Create a `.env` file based on the `samples/sample.env` file.
 To generate and/or evaluate candidate summaries, configure the language variables in the `.env` file:
 
 - `LANGUAGE`: `English`, `Greek`, `Spanish`
-- `LANGUAGE_CODE`: `en`, `el`, `es`
 - `SUMMARY_VER`:
   - English: `_1`
   - Greek: `_2`
@@ -109,7 +127,7 @@ mkdir evaluation_methods
 cd evaluation_methods
 ```
 
-Clone the repositories inside the `evaluation_methods` directory following the instructions of the repositories.
+Clone the repositories inside the `evaluation_methods` directory **following the instructions of the repositories**.
 
 ```bash
 git clone <the-eval-metric-repo>
@@ -127,12 +145,52 @@ uv sync --lock
 
 ## 🚀 Running the scripts
 
+To use the scripts, ensure that all the [requirements](#requirements) are met.
+
 ### 🔧 Run options
 
 ```sh
 # Run the pipeline with selected steps:
 uv run main.py [--collect] [--generate] [--evaluate] [--all]
 ```
+
+#### Collect
+
+To collect the Greek annual reports dataset run the main script with the `collect` flag:
+
+```bash
+uv run main.py --collect
+```
+
+#### Generate
+
+To create noisy summaries run the main script with the `generate` flag:
+
+```bash
+uv run main.py --generate
+```
+
+You can optionally use the `truncate` flag to truncate the summaries at **512 tokens** *before* applying the noise. This is useful, if you need to evaluate summaries with metrics that have token input limitations.
+
+**Note**:
+Even with truncation, it is not possible to predetermine the exact length of the final text and it is certain that it will exceed the 512 token limit and be automatically truncated. However, truncating prior to noise insertion limits the automatic truncation of the metric at inference time making the results more reliable.
+
+#### Evaluate
+
+To evaluate summaries run the main script with the `evaluate` flag. When running the evaluation script, you need to specify whether you're going to use CPU-bound or GPU-bound metrics by using either the `cpu` or `gpu` flag. If you want to use a reference-free metric, such as LongDocFACTScore, you need to add the `no-refs` flag.
+
+**Note**:
+
+LongDocFACTScore is GPU-bound as it depends on BARTScore, and therefore you need both `gpu` and `no-refs` flags.
+
+```bash
+uv run main.py --evaluate
+```
+
+#### Generic flags
+
+- `all`: Run all the scripts (collect, generate, evaluate)
+- `subset`: Run your selected script for [subset] documents, where the subset is a positive integer
 
 #### Examples
 
@@ -141,10 +199,10 @@ uv run main.py [--collect] [--generate] [--evaluate] [--all]
 uv run main.py --collect
 
 # Generate noisy summaries
-uv run main.py --generate
+uv run main.py --generate --truncate
 
 # Evaluate summaries
-uv run main.py --evaluate
+uv run main.py --evaluate --gpu --subset 10
 
 # Run all steps: collect, generate, evaluate
 uv run main.py --all
