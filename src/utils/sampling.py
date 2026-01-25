@@ -4,9 +4,10 @@ import random
 from typing import Optional
 from loguru import logger
 
+
 def get_sample_docs(
-        sampled_docs_path:str = "results/sampling.txt",
-        seeds_path:str = "results/seeds.json",
+        sampled_docs_path:str = "results/sampling/sampling.txt",
+        seeds_path:str = "results/sampling/seeds.json",
         source_docs:Optional[list] = None,
         n_samples:Optional[int] = None,
         ) -> list:
@@ -17,10 +18,10 @@ def get_sample_docs(
     These seeds are also saved for reproducibility.
 
     Args:
-        source_docs (list): The list of source documents to sample from.
-        n_samples (int): The number of samples to draw.
         sampled_docs_path (str): The file path of the sampled documents.
         seeds_path (str): The file path of the random seeds.
+        source_docs (list): The list of source documents to sample from.
+        n_samples (int): The number of samples to draw.
 
     Returns:
         list: A list of sampled documents.
