@@ -30,6 +30,16 @@ Due to access limitations a script has been added to download the Greek dataset 
 
 To get the Greek dataset [run the data collection script](#-running-the-scripts).
 
+### Dataset and text statistics
+
+You can get the statistics for all the datasets (original datasets and generated candidate summaries) and their texts by running the [stats scripts](#-running-the-scripts).
+
+**Text statistics extracted**:
+
+- spaCy token count
+- spaCy sentence count
+- BERT token count
+
 ### Generation of noisy candidate summaries
 
 To create noisy summaries from existing ones [run the summary corruption script](#-running-the-scripts).
@@ -160,6 +170,22 @@ To collect the Greek annual reports dataset run the main script with the `collec
 
 ```bash
 uv run main.py --collect
+```
+
+#### Merge datasets (needed to get the dataset stats)
+
+To merge all the datasets (all languages, all document types) and store them in a single place run the following:
+
+```bash
+uv run main.py --merge-datasets
+```
+
+#### Get statistics
+
+To get the text statistics for the merged dataset run the following:
+
+```bash
+uv run main.py --stats
 ```
 
 #### Generate

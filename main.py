@@ -20,12 +20,15 @@ warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
 from argparse import ArgumentParser
 from dotenv import load_dotenv
 from loguru import logger
+from transformers import BertTokenizer
 from transformers.utils import logging as hf_logging
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
+from src.modules.tokenizer import Tokenizer
 from src.pipelines.collect import collect_data
 from src.pipelines.generate import generate_noisy_summaries
 from src.pipelines.evaluate import evaluate_summaries
+from src.pipelines.get_stats import get_dataset, get_stats
 from src.utils.sampling import get_sample_docs
 
 
@@ -40,6 +43,8 @@ FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 N_SAMPLES = int(os.getenv("N_SAMPLES", 5))
 SAMPLED_DOCS_PATH = os.getenv("SAMPLED_DOCS_PATH")
 SEEDS_PATH = os.getenv("SEEDS_PATH")
+DATASET_PATH = os.getenv("DATASET_PATH")
+STATISTICS_PATH = os.getenv("STATISTICS_PATH")
 
 # Silence the logger
 logger.remove()
@@ -59,23 +64,27 @@ def main():
 
     # Parse args
     # Data collection
-    parser.add_argument("--collect", action="store_true", help="Collect data")
+    parser.add_argument("--collect", action="store_true", help="Collect data.")
+
+    # Get document statistics
+    parser.add_argument("--merge-datasets", action="store_true", help="Create a unified dataset from all the .txt files.")
+    parser.add_argument("--stats", action="store_true", help="Get text statistics.")
 
     # Noisy summaries generation
-    parser.add_argument("--generate", action="store_true", help="Generate noisy summaries")
-    parser.add_argument("--truncate", action="store_true", help="Truncate long documents")
+    parser.add_argument("--generate", action="store_true", help="Generate noisy summaries.")
+    parser.add_argument("--truncate", action="store_true", help="Truncate long documents.")
 
     # Evaluation
-    parser.add_argument("--evaluate", action="store_true", help="Evaluate summaries")
-    parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation")
-    parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation")
-    parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation")
+    parser.add_argument("--evaluate", action="store_true", help="Evaluate summaries.")
+    parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation.")
+    parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation.")
+    parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation.")
 
     # Subset
-    parser.add_argument("--subset", type=int, help="Subset of source documents to process")
+    parser.add_argument("--subset", type=int, help="Subset of source documents to process.")
 
     # Run all steps
-    parser.add_argument("--all", action="store_true", help="Run all steps")
+    parser.add_argument("--all", action="store_true", help="Run all steps.")
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
@@ -97,6 +106,21 @@ def main():
 
     if args.collect or args.all:
         collect_data()
+
+    if args.merge_datasets:
+        get_dataset(dataset_path=DATASET_PATH)
+
+    if args.stats:
+        df = get_dataset(dataset_path=DATASET_PATH)
+        spacy_tokenizer = Tokenizer(lang_code="en")
+        bert_tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+        get_stats(
+            df=df,
+            spacy_tokenizer=spacy_tokenizer,
+            bert_tokenizer=bert_tokenizer,
+            results_path=STATISTICS_PATH
+            )
+
     if args.generate or args.all:
         generate_noisy_summaries(
             source_docs=source_docs,
@@ -106,6 +130,7 @@ def main():
             file_extension=FILE_EXTENSION,
             truncate_for_bert=args.truncate
             )
+
     if args.evaluate or args.all:
         evaluate_summaries(
             source_docs=source_docs,
