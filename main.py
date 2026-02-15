@@ -24,11 +24,12 @@ from transformers import BertTokenizer
 from transformers.utils import logging as hf_logging
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
+from src.modules.data_collector import DataCollector
+from src.modules.stats_extractor import StatsExtractor
 from src.modules.tokenizer import Tokenizer
-from src.pipelines.collect import collect_data
+
 from src.pipelines.generate import generate_noisy_summaries
 from src.pipelines.evaluate import evaluate_summaries
-from src.pipelines.get_stats import get_dataset, get_stats
 from src.utils.sampling import get_sample_docs
 
 
@@ -105,21 +106,23 @@ def main():
     logger.debug(f"Source documents: {source_docs}")
 
     if args.collect or args.all:
-        collect_data()
+        data_collector = DataCollector()
+        data_collector.collect()
 
     if args.merge_datasets:
-        get_dataset(dataset_path=DATASET_PATH)
+        StatsExtractor.get_dataset()
 
     if args.stats:
-        df = get_dataset(dataset_path=DATASET_PATH)
+        df = StatsExtractor.get_dataset(dataset_path=DATASET_PATH)
         spacy_tokenizer = Tokenizer(lang_code="en")
         bert_tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
-        get_stats(
-            df=df,
+        stats_extractor = StatsExtractor(
+            dataset_path=DATASET_PATH,
             spacy_tokenizer=spacy_tokenizer,
             bert_tokenizer=bert_tokenizer,
             results_path=STATISTICS_PATH
-            )
+        )
+        stats_extractor.get_stats(df=df)
 
     if args.generate or args.all:
         generate_noisy_summaries(
