@@ -16,7 +16,7 @@ FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 # TODO: Load cpu or gpu metrics based on the CLI command
 def load_metrics(
         lang: str,
-        cfg_path: str=os.getenv("EVALUATION_CONFIG_PATH", "src/conf/evaluation.yaml")
+        cfg_path: str=os.getenv("EVALUATION_CONFIG_PATH", "src/conf/config.yaml")
         ) -> Dict:
     try:
         with open(cfg_path) as f:

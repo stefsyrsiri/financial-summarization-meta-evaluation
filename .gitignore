@@ -5,6 +5,9 @@ __pycache__/
 # Data files
 /data
 /results/evaluation/old
+/src/conf/config.yaml
+
+# File formats
 *.parquet
 *.tex
 
