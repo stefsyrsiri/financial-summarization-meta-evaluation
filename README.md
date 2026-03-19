@@ -88,9 +88,10 @@ A `data` directory at the root is needed.
 
 If you don't have a dataset available, you can [run the data collection script](#-running-the-scripts) to get a dataset of Greek annual reports and their gold summaries
 
-#### Environment variables
+#### Untracked files and directories
 
-Create a `.env` file based on the `samples/sample.env` file.
+1. Create a `.env` file at the root based on the `samples/sample.env` file.
+2. Create a `conf/config.yaml` file in the `src/` directory.
 
 To generate and/or evaluate candidate summaries, configure the language variables in the `.env` file:
 
@@ -104,28 +105,15 @@ To generate and/or evaluate candidate summaries, configure the language variable
 
 The metrics used in this project are:
 
-- `N-gram-based` - Installed with `uv`
-  - Rouge1
-  - Rouge2
-
-- `N-gram-graph-based` - Contact [G.Giannakopoulos](https://github.com/ggianna)
-  - AutoSummENG
-  - MeMoG
-  - NPowER
-
-- `Embeddings-based` - Installed with `uv`
-  - BERTScore
-
-- `Model-based`
-  - Cloned GH repository
-    - [BARTScore](https://github.com/neulab/BARTScore)
-    - [Bleurt](https://github.com/google-research/bleurt)
-
-  - Used through HuggingFace
-    - FactCC
-
-  - Installed with `uv`
-    - LongDocFACTScore
+| Metric type        |         Metric name        |                         How to set up                         |
+|--------------------|:--------------------------:|:-------------------------------------------------------------:|
+| N-gram-based       | Rouge-1, Rouge-2           | Comes with the project                                        |
+| N-gram-graph-based | AutoSummENG, MeMoG, NPowER | Contact [G.Giannakopoulos](https://github.com/ggianna)        |
+| Embeddings-based   | BERTScore                  | Comes with the project                                        |
+| Embeddings-based   | BARTScore                  | Clone [repository](https://github.com/neulab/BARTScore)       |
+| Model-based        | Bleurt                     | Clone [repository](https://github.com/google-research/bleurt) |
+| Model-based        | FactCC                     | Model is used via HuggingFace                                 |
+| Model-based        | LongDocFACTScore           | Comes with the project                                        |
 
 ##### Installation of BARTScore and Bleurt
 
