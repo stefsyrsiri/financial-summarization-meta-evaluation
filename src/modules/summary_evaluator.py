@@ -100,16 +100,15 @@ class SummaryEvaluator:
 
                             # AutoSummENG
                             if "autosummeng" in self.metrics:
-                                append_score(data, source_file=source_file, type="Graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
+                                append_score(data, source_file=source_file, type="N-gram-graph-based", method="AutoSummENG", candidate_variant=candidate_variant, result=autosummeng_score, duration=duration)
 
                             # MeMoG
                             if "memog" in self.metrics:
-                                append_score(data, source_file=source_file, type="Graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
+                                append_score(data, source_file=source_file, type="N-gram-graph-based", method="MeMoG", candidate_variant=candidate_variant, result=memog_score, duration=duration)
 
-                            # ---------META
                             # NPowER - computed in graph methods
                             if "npower" in self.metrics:
-                                append_score(data, source_file=source_file, type="Meta", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
+                                append_score(data, source_file=source_file, type="N-gram-graph-based", method="NPowER", candidate_variant=candidate_variant, result=npower_score, duration=duration)
 
                 except FileNotFoundError as e:
                     logger.exception(f"File not found: {e}. Skipping candidate_file: {candidate_file}.")
@@ -195,38 +194,13 @@ class SummaryEvaluator:
                         for variant, score in zip(variants, f1_scores):
                             append_score(data, source_file=source_file, type="Embeddings-based", method="BERTScore", candidate_variant=variant, result=float(score), duration=duration/len(batch))
 
-                    # # BRUGEscore batch
-                    # start = time.time()
-
-                    # # --- ROUGE2 ---
-                    # rouge2_f1scores = []
-                    # for cand in texts:
-                    #     rouge2_f1 = self._rouge2.score(target=gold_summary, prediction=cand)["rouge2"][2]
-                    #     rouge2_f1scores.append(rouge2_f1)
-
-                    # # --- BERTScore ---
-                    # _, _, bert_f1_scores = self._bertscore.score(texts, [gold_summary] * len(texts))
-                    # bert_f1_scores = [float(s) for s in bert_f1_scores]
-
-                    # # --- Harmonic Mean (BRUGEscore) ---
-                    # bruges_scores = [
-                    #     harmonic_mean([r2, b])
-                    #     for r2, b in zip(rouge2_f1scores, bert_f1_scores)
-                    # ]
-
-                    # duration = time.time() - start
-                    # per_item_time = duration / len(texts)
-
-                    # for variant, score in zip(variants, bruges_scores):
-                    #     append_score(
-                    #         data,
-                    #         source_file=source_file,
-                    #         type="Meta",
-                    #         method="BRUGEscore",
-                    #         candidate_variant=variant,
-                    #         result=float(score),
-                    #         duration=per_item_time,
-                    #     )
+                    # BLEURT batch
+                    if "bleurt" in self.metrics:
+                        start = time.time()
+                        bleurt_scores = self.metrics["bleurt"].score(references=[gold_summary]*len(texts), candidates=texts)
+                        duration = time.time() - start
+                        for variant, score in zip(variants, bleurt_scores):
+                            append_score(data, source_file=source_file, type="Model-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
 
                     if self.language == "en":
                         # BARTScore batch
@@ -237,21 +211,13 @@ class SummaryEvaluator:
                             for variant, score in zip(variants, bart_scores):
                                 append_score(data, source_file=source_file, type="Embeddings-based", method="BARTScore", candidate_variant=variant, result=score, duration=duration/len(batch))
 
-                        # BLEURT batch
-                        if "bleurt" in self.metrics:
-                            start = time.time()
-                            bleurt_scores = self.metrics["bleurt"].score(references=[gold_summary]*len(texts), candidates=texts)
-                            duration = time.time() - start
-                            for variant, score in zip(variants, bleurt_scores):
-                                append_score(data, source_file=source_file, type="Embeddings-based", method="Bleurt", candidate_variant=variant, result=score, duration=duration/len(batch))
-
                         # FactCC batch
                         if "factcc" in self.metrics:
                             start = time.time()
                             factcc_logits, factcc_preds, factcc_probs = self.metrics["factcc"](source_docs=[gold_summary]*len(texts), summaries=texts, batch_size=batch_size)
                             duration = time.time() - start
                             for variant, _, _, prob in zip(variants, factcc_logits, factcc_preds, factcc_probs):
-                                append_score(data, source_file=source_file, type="Embeddings-based", method="FactCC", candidate_variant=variant, result=prob, duration=duration/len(batch))
+                                append_score(data, source_file=source_file, type="Model-based", method="FactCC", candidate_variant=variant, result=prob, duration=duration/len(batch))
 
 
             results_lock_path = self.results_path + "_gpu.lock"

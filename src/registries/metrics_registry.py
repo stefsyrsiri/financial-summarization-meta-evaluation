@@ -39,11 +39,11 @@ METRICS = {
     "npower": EvalMetric("NPowER", "N-gram-graph-based", "cpu", True, True),
 
     "bertscore": EvalMetric("BERTScore", "Embeddings-based", "cuda", True, True),
+    "bartscore": EvalMetric("BARTScore", "Embeddings-based", "cuda", False, True),
+    "ldfactscore": EvalMetric("LongDocFACTScore", "Embeddings-based", "cuda", False, False),
 
-    "bartscore": EvalMetric("BARTScore", "Model-based", "cuda", False, True),
-    "bleurt": EvalMetric("Bleurt", "Model-based", "cuda", False, True),
+    "bleurt": EvalMetric("Bleurt", "Model-based", "cuda", True, True),
     "factcc": EvalMetric("FactCC", "Model-based", "cuda", False, True),
-    "ldfactscore": EvalMetric("LongDocFACTScore", "Model-based", "cuda", False, False),
 }
 
 
