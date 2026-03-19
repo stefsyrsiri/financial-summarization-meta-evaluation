@@ -4,7 +4,7 @@ __pycache__/
 
 # Data files
 /data
-*.csv
+/results/evaluation/old
 *.parquet
 *.tex
 
