@@ -86,17 +86,40 @@ def t_corr(df, lang, noise_variant, lang_specific=False):
 
 
 def t_corr_all(df, noise_variant, index_cols=['eval_type', 'eval_method']):
-    en = df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'English')].iloc[:, 2:].rename(columns={'spearman': 'English'})
-    el = df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Greek')].iloc[:, 2:].rename(columns={'spearman': 'Greek'})
-    es = df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Spanish')].iloc[:, 2:].rename(columns={'spearman': 'Spanish'})
+    # English
+    en = (
+        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'English')].iloc[:, 2:]
+        .rename(columns={'spearman': 'English', 'p_value': 'English_p'})
+    )
+    # Greek
+    el = (
+        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Greek')]
+        .iloc[:, 2:]
+        .rename(columns={'spearman': 'Greek', 'p_value': 'Greek_p'})
+    )
+    # Spanish
+    es = (
+        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Spanish')]
+        .iloc[:, 2:]
+        .rename(columns={'spearman': 'Spanish', 'p_value': 'Spanish_p'})
+    )
     merged = en.merge(el, on=index_cols, how='left').merge(es, on=index_cols, how='left')
-    return merged.rename(columns={'eval_type': 'evaluation type', 'eval_method': 'evaluation method'}).round(2)
+    return merged.rename(columns={'eval_type': 'evaluation type', 'eval_method': 'evaluation method'})
 
 
-def t_corr_all_formatted(df, noise_variant, cmap="coolwarm_r", subset=['English', 'Greek', 'Spanish'], index_cols=['eval_type', 'eval_method']):
-    return t_corr_all(df=df, noise_variant=noise_variant, index_cols=index_cols)\
-            .style.background_gradient(cmap=cmap, subset=subset)\
-            .format({col: '{:.2f}' for col in subset})
+def t_corr_all_formatted(
+    df, noise_variant,
+    cmap="coolwarm_r",
+    subset=['English', 'Greek', 'Spanish'],
+    index_cols=['eval_type', 'eval_method']
+):
+    return (
+        t_corr_all(df=df, noise_variant=noise_variant, index_cols=index_cols)
+        .style
+        .background_gradient(cmap=cmap, subset=subset)
+        .format({col: '{:.2f}' for col in subset + ['English_p','Greek_p','Spanish_p']})
+    )
+
 
 
 def t_corr_all_html(df, noise_variant):
