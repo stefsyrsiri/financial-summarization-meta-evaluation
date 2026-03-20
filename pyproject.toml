@@ -17,6 +17,7 @@ dependencies = [
     "pandas>=2.3.2",
     "pyarrow>=21.0.0",
     "rouge-score>=0.1.2",
+    "scikit-posthocs>=0.12.0",
     "seaborn>=0.13.2",
     "spacy>=3.8.7",
     "summac>=0.0.4",
