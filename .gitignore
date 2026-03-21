@@ -9,6 +9,7 @@ __pycache__/
 
 # File formats
 *.parquet
+*.png
 *.tex
 
 # Logs
