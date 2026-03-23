@@ -10,6 +10,7 @@ from evaluation_methods.BARTScore.bart_score import BARTScorer
 from evaluation_methods.Bleurt.bleurt.score import BleurtScorer
 from evaluation_methods.NPowERV1 import npower
 from evaluation_methods.FactCC.factcc import batched_FactCC
+from evaluation_methods.FinSumEval.finsumeval import SumEval
 from src.modules.tokenizer import Tokenizer
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -44,6 +45,8 @@ METRICS = {
 
     "bleurt": EvalMetric("Bleurt", "Model-based", "cuda", True, True),
     "factcc": EvalMetric("FactCC", "Model-based", "cuda", False, True),
+
+    "finsumeval": EvalMetric("FinSumEval", "Meta", "cuda", True, False),
 }
 
 
@@ -74,5 +77,9 @@ METRIC_FACTORIES = {
 
     "ldfactscore": lambda lang: LongDocFACTScore(
         device=device
+    ),
+
+    "finsumeval": lambda lang: SumEval(
+        lang=lang
     ),
 }

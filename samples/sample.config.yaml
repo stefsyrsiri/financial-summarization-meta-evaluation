@@ -5,12 +5,13 @@ metrics:
 # CPU
   rouge1: false
   rouge2: false
-  autosummeng: true
-  memog: true
-  npower: true
+  autosummeng: false
+  memog: false
+  npower: false
 # GPU
-  bertscore: true
-  bartscore: true
-  bleurt: true
-  factcc: true
-  ldfactscore: true
+  bertscore: false
+  bartscore: false
+  bleurt: false
+  factcc: false
+  ldfactscore: false
+  finsumeval: true
