@@ -72,7 +72,7 @@ class SummaryEvaluator:
             with open(gold_summary_path, mode="r", encoding="utf-8") as gold_f:
                 gold_summary = gold_f.read()
 
-            candidate_summaries = get_candidate_filenames(self, source_file)
+            candidate_summaries = get_candidate_filenames(source_file, self.candidates_dir, self.gold_dir, randoms=True)
 
             for candidate_file in candidate_summaries:
                 logger.info(f"Evaluating candidate summary: {candidate_file}")
@@ -209,10 +209,9 @@ class SummaryEvaluator:
                 "eval_method": [],
                 "variant": [],
                 "score": [],
-                "duration": []
+                "duration": [],
             }
-            candidate_summaries = get_candidate_filenames(self, source_file)
-
+            candidate_summaries = get_candidate_filenames(source_file, self.candidates_dir, self.gold_dir, randoms=True)
             if no_refs:
                 source_doc_path = os.path.join(self.source_dir, f"{source_file}{FILE_EXTENSION}")
                 with open(source_doc_path, mode="r", encoding="utf-8") as source_f:
@@ -224,7 +223,7 @@ class SummaryEvaluator:
 
             for i in range(0, len(candidate_summaries), batch_size):
                 batch_files = candidate_summaries[i : i + batch_size]
-                batch = load_candidate_texts(self, source_file, batch_files)
+                batch = load_candidate_texts(source_file, batch_files, self.gold_dir, self.candidates_dir)
                 variants = [v for v, _ in batch]
                 texts = [t for _, t in batch]
 

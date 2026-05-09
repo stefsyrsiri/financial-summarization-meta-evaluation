@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from modules.summary_corruptor import SummaryCorruptor
 from modules.summary_generator import SummaryGenerator
+from src.utils.summary_evaluator_utils import get_candidate_metadata, get_candidate_filenames
 
 
 def generate_noisy_summaries(

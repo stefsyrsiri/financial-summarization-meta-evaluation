@@ -52,13 +52,18 @@ def load_checkpoint(file_path):
         return f.read().splitlines()
 
 
-def get_candidate_filenames(instance, source_doc):
+def get_candidate_filenames(source_doc, candidates_dir, gold_dir=Optional[str], randoms=False):
     # Actual candidate summaries
-    candidate_summaries = [doc for doc in os.listdir(instance.candidates_dir) if doc.startswith(f"{source_doc}_")]
+    candidate_summaries = [doc for doc in os.listdir(candidates_dir) if doc.startswith(f"{source_doc}_")]
 
-    # 10 randoms
-    other_summaries = [doc for doc in os.listdir(instance.gold_dir) if not doc.startswith(f"{source_doc}_") and doc.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}")]
-    candidate_summaries.extend(other_summaries[:10])
+    if randoms:
+        # 10 randoms
+        other_summaries = [
+            doc
+            for doc in os.listdir(gold_dir)
+            if not doc.startswith(f"{source_doc}_") and doc.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}")
+        ]
+        candidate_summaries.extend(other_summaries[:10])
 
     # Source summary
     candidate_summaries.insert(0, source_doc)
@@ -66,27 +71,35 @@ def get_candidate_filenames(instance, source_doc):
     return candidate_summaries
 
 
-def get_candidate_metadata(instance, candidate_file, source_doc):
+def get_candidate_metadata(candidate_file, source_doc, gold_dir, candidates_dir):
     # Source
     if candidate_file == source_doc:
-        candidate_path = os.path.join(instance.gold_dir, f"{candidate_file}{SUMMARY_VER}{FILE_EXTENSION}")
+        candidate_path = os.path.join(gold_dir, f"{candidate_file}{SUMMARY_VER}{FILE_EXTENSION}")
         candidate_variant = "source"
     # Other (gold) summaries
     elif candidate_file.endswith(f"{SUMMARY_VER}{FILE_EXTENSION}"):
-        candidate_path = os.path.join(instance.gold_dir, candidate_file)
+        candidate_path = os.path.join(gold_dir, candidate_file)
         candidate_variant = candidate_file.removesuffix(f"{FILE_EXTENSION}")
     # Candidate / Destroyed summaries
     else:
-        candidate_path = os.path.join(instance.candidates_dir, candidate_file)
+        candidate_path = os.path.join(candidates_dir, candidate_file)
         candidate_variant = candidate_file.removeprefix(f"{source_doc}_").removesuffix(f"{FILE_EXTENSION}")
 
     return candidate_path, candidate_variant
 
 
-def load_candidate_texts(instance, source_doc: str, candidate_files: list):
+def load_source_texts(source_docs: list, source_dir: str):
+    texts = []
+    for source_doc in source_docs:
+        with open(os.path.join(source_dir, source_doc), "r", encoding="utf-8") as f:
+            texts.append(f.read())
+    return texts
+
+
+def load_candidate_texts(source_doc: str, candidate_files: list, gold_dir: str, candidates_dir: str):
     texts = []
     for candidate_file in candidate_files:
-        candidate_path, candidate_variant = get_candidate_metadata(instance, candidate_file, source_doc)
+        candidate_path, candidate_variant = get_candidate_metadata(candidate_file, source_doc, gold_dir, candidates_dir)
         with open(candidate_path, "r", encoding="utf-8") as f:
             texts.append((candidate_variant, f.read()))
     return texts
