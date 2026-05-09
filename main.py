@@ -202,6 +202,7 @@ def main():
             results_path=RESULTS_PATH,
             no_refs=args.no_refs,
             run_cpu=args.cpu or (not args.cpu and not args.gpu),
+            run_gpu=args.gpu or (not args.cpu and not args.gpu),
             one_to_one=args.new,
         )
 
