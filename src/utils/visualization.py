@@ -10,6 +10,8 @@ def plot_scores(
     noise_variant: str,
     languages: list[str] = ["English", "Greek", "Spanish"],
     hue: str = "eval_method",
+    save_and_close: bool = False,
+    file_name: str = None,
 ):
     """
     Plot the scores for different languages and noise percentages.
@@ -21,7 +23,10 @@ def plot_scores(
         languages (list): List of language names corresponding to the DataFrames.
     """
     # Create subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
+    if save_and_close:
+        fig, axes = plt.subplots(3, 1, figsize=(8, 15), sharex=True)
+    else:
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
 
     for ax, df, lang in zip(axes, dfs, languages):
         # Base lineplot for source and noise variant
@@ -54,7 +59,11 @@ def plot_scores(
 
     fig.suptitle(title, fontsize=16, y=0.95)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
+    if save_and_close:
+        plt.savefig(f"../figures/{file_name if file_name else noise_variant}_lineplot.png", dpi=300)
+        plt.close(fig)
+    else:
+        plt.show()
 
 
 def plot_scores_dist(df, noise_variant, title, x="language", y="score", hue="eval_method"):
@@ -122,7 +131,5 @@ def t_corr_all_formatted(
 
 def save_table(df, noise_variant, file_name=None):
     t_corr_all(df=df, noise_variant=noise_variant).to_latex(
-        buf=f"../tables/{noise_variant}.tex",
-        na_rep="N/A",
-        float_format="%.2f"
-        )
+        buf=f"../tables/{file_name if file_name else noise_variant}.tex", na_rep="N/A", float_format="%.2f"
+    )

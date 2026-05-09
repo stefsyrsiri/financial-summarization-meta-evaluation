@@ -53,6 +53,10 @@ def run_gpu_metrics(
         candidate_dir=candidate_summaries_dir,
         results_path=results_path,
     )
+    if one_to_one:
+        logger.info("Running one-to-one evaluation on GPU.")
+        evaluator.evaluate_summaries_gpu_new()
+    else:
         for doc in tqdm(source_docs, desc="Processing documents"):
             if doc not in evaluator._evaluated_docs_gpu:
                 evaluator.evaluate_summaries_gpu_batch(source_file=doc, batch_size=batch_size, no_refs=no_refs)
@@ -66,6 +70,7 @@ def evaluate_summaries(
     candidate_summaries_dir,
     results_path,
     no_refs,
+    one_to_one,
     run_cpu=True,
     run_gpu=True,
 ):
@@ -75,5 +80,7 @@ def evaluate_summaries(
     if run_gpu:
         if not torch.cuda.is_available():
             logger.warning("No GPU available. Using CPU.")
-        run_gpu_metrics(source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs)
+        run_gpu_metrics(
+            source_docs, source_dir, gold_summaries_dir, candidate_summaries_dir, results_path, no_refs, one_to_one
+        )
     logger.info("Evaluation pipeline finished")
