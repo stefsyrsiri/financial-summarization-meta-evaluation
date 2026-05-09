@@ -28,20 +28,24 @@ from transformers.utils import logging as hf_logging
 
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
+from evaluation_methods.FinSumEval.metric.extractors.ngram import NgramExtractor
+from evaluation_methods.FinSumEval.metric.tokenizers.tokenizer import Tokenizer as ExtractorTokenizer
 
 from src.modules.data_collector import DataCollector
 from src.modules.stats_extractor import StatsExtractor
 from src.modules.tokenizer import Tokenizer
 
-from src.pipelines.generate import generate_noisy_summaries
+from src.pipelines.generate import generate_gold_summaries, generate_noisy_summaries
 from src.pipelines.evaluate import evaluate_summaries
 from src.utils.sampling import get_sample_docs
+
 
 
 load_dotenv(override=True)
 LANGUAGE = os.getenv("LANGUAGE")
 ANNUAL_REPORTS_DIR = os.getenv("ANNUAL_REPORTS_DIR")
 GOLD_SUMMARIES_DIR = os.getenv("GOLD_SUMMARIES_DIR")
+EXTRACTED_SUMMARIES_DIR = os.getenv("EXTRACTED_SUMMARIES_DIR")
 CANDIDATE_SUMMARIES_DIR = os.getenv("CANDIDATE_SUMMARIES_DIR")
 RESULTS_PATH = os.getenv("RESULTS_PATH")
 SUMMARY_VER = os.getenv("SUMMARY_VER")
@@ -97,6 +101,10 @@ def main():
     parser.add_argument("--cpu", action="store_true", help="Run only CPU-bound evaluation.")
     parser.add_argument("--gpu", action="store_true", help="Run only GPU-bound evaluation.")
     parser.add_argument("--no-refs", action="store_true", help="Reference free evaluation.")
+    parser.add_argument("--new", action="store_true", help="Evaluate using extracted summaries.")
+
+    # N-gram overlap-based extraction
+    parser.add_argument("--ngram-extract", action="store_true", help="Run n-gram overlap-based extraction.")
 
     # Subset
     parser.add_argument("--subset", type=int, help="Subset of source documents to process.")
@@ -106,10 +114,12 @@ def main():
     args = parser.parse_args()
 
     # Subset of the source documents
-    source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
+    if args.new:
+        source_docs = [file[:-4] for file in os.listdir(EXTRACTED_SUMMARIES_DIR)]  # :-4 removes the file extension
+    else:
+        source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
 
-    # Sampling for English docs
-    if LANGUAGE == "English":
+    source_docs = source_docs[: args.subset] if args.subset else source_docs
         logger.debug(f"Main path: {SAMPLED_DOCS_PATH}")
         source_docs = get_sample_docs(
             sampled_docs_path=SAMPLED_DOCS_PATH,
@@ -149,13 +159,26 @@ def main():
             candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
             summary_ver=SUMMARY_VER,
             file_extension=FILE_EXTENSION,
-            truncate_for_bert=args.truncate
-            )
+            truncate_for_bert=args.truncate,
+        )
+
+    if args.ngram_extract:
+        tokenizer = ExtractorTokenizer(LANGUAGE_CODE)
+        extractor = NgramExtractor(tokenizer)
+        generate_gold_summaries(
+            source_docs=source_docs,
+            source_dir=ANNUAL_REPORTS_DIR,
+            candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
+            gold_summaries_dir=GOLD_SUMMARIES_DIR,
+            extracted_summaries_dir=EXTRACTED_SUMMARIES_DIR,
+            file_extension=FILE_EXTENSION,
+            extractor=extractor,
+        )
 
     if args.evaluate or args.all:
         evaluate_summaries(
             source_docs=source_docs,
-            source_dir=ANNUAL_REPORTS_DIR,
+            source_dir=EXTRACTED_SUMMARIES_DIR if args.new else ANNUAL_REPORTS_DIR,
             gold_summaries_dir=GOLD_SUMMARIES_DIR,
             candidate_summaries_dir=CANDIDATE_SUMMARIES_DIR,
             results_path=RESULTS_PATH,
