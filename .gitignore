@@ -6,6 +6,7 @@ __pycache__/
 /data
 /results/evaluation/old
 /src/conf/config.yaml
+*.csv
 
 # File formats
 *.parquet
