@@ -8,11 +8,14 @@ version.
 """
 
 import os
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # TensorFlow suppress info/warning
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
@@ -22,7 +25,9 @@ from dotenv import load_dotenv
 from loguru import logger
 from transformers import BertTokenizer
 from transformers.utils import logging as hf_logging
+
 hf_logging.set_verbosity_error()  # Huggingface warnings
+
 
 from src.modules.data_collector import DataCollector
 from src.modules.stats_extractor import StatsExtractor
@@ -41,9 +46,11 @@ CANDIDATE_SUMMARIES_DIR = os.getenv("CANDIDATE_SUMMARIES_DIR")
 RESULTS_PATH = os.getenv("RESULTS_PATH")
 SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
+
 N_SAMPLES = int(os.getenv("N_SAMPLES", 5))
 SAMPLED_DOCS_PATH = os.getenv("SAMPLED_DOCS_PATH")
 SEEDS_PATH = os.getenv("SEEDS_PATH")
+
 DATASET_PATH = os.getenv("DATASET_PATH")
 STATISTICS_PATH = os.getenv("STATISTICS_PATH")
 
@@ -54,7 +61,13 @@ logger.remove()
 logger.add(sys.stdout, level="INFO", enqueue=True)
 
 # File
-logger.add("logs/main_{time}.log", rotation="1 day", compression="zip", level="INFO", retention="7 days")
+logger.add(
+    "logs/main_{time}.log",
+    rotation="1 day",
+    compression="zip",
+    level="INFO",
+    retention="7 days",
+)
 
 
 @logger.catch
@@ -68,7 +81,11 @@ def main():
     parser.add_argument("--collect", action="store_true", help="Collect data.")
 
     # Get document statistics
-    parser.add_argument("--merge-datasets", action="store_true", help="Create a unified dataset from all the .txt files.")
+    parser.add_argument(
+        "--merge-datasets",
+        action="store_true",
+        help="Create a unified dataset from all the .txt files.",
+    )
     parser.add_argument("--stats", action="store_true", help="Get text statistics.")
 
     # Noisy summaries generation
@@ -86,6 +103,7 @@ def main():
 
     # Run all steps
     parser.add_argument("--all", action="store_true", help="Run all steps.")
+    args = parser.parse_args()
 
     # Subset of the source documents
     source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
@@ -114,13 +132,13 @@ def main():
 
     if args.stats:
         df = StatsExtractor.get_dataset(dataset_path=DATASET_PATH)
-        spacy_tokenizer = Tokenizer(lang_code="en")
-        bert_tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+        spacy_tokenizer = Tokenizer(lang_code=LANGUAGE_CODE)
+        bert_tokenizer = BertTokenizer.from_pretrained("bert-base-multilingual-cased")
         stats_extractor = StatsExtractor(
             dataset_path=DATASET_PATH,
             spacy_tokenizer=spacy_tokenizer,
             bert_tokenizer=bert_tokenizer,
-            results_path=STATISTICS_PATH
+            results_path=STATISTICS_PATH,
         )
         stats_extractor.get_stats(df=df)
 
