@@ -52,6 +52,7 @@ SUMMARY_VER = os.getenv("SUMMARY_VER")
 FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 
 N_SAMPLES = int(os.getenv("N_SAMPLES", 5))
+SAMPLE_K_DOCS = int(os.getenv("SAMPLE_K_DOCS"))
 SAMPLED_DOCS_PATH = os.getenv("SAMPLED_DOCS_PATH")
 SEEDS_PATH = os.getenv("SEEDS_PATH")
 
@@ -92,6 +93,9 @@ def main():
     )
     parser.add_argument("--stats", action="store_true", help="Get text statistics.")
 
+    # Sampling
+    parser.add_argument("--sample", action="store_true", help="Sample source documents.")
+
     # Noisy summaries generation
     parser.add_argument("--generate", action="store_true", help="Generate noisy summaries.")
     parser.add_argument("--truncate", action="store_true", help="Truncate long documents.")
@@ -116,20 +120,32 @@ def main():
     # Subset of the source documents
     if args.new:
         source_docs = [file[:-4] for file in os.listdir(EXTRACTED_SUMMARIES_DIR)]  # :-4 removes the file extension
-    else:
+    elif LANGUAGE_CODE == "en":
         source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
-
-    source_docs = source_docs[: args.subset] if args.subset else source_docs
         logger.debug(f"Main path: {SAMPLED_DOCS_PATH}")
         source_docs = get_sample_docs(
             sampled_docs_path=SAMPLED_DOCS_PATH,
             seeds_path=SEEDS_PATH,
             source_docs=source_docs,
             n_samples=N_SAMPLES,
-            )
+            sample_k=SAMPLE_K_DOCS,
+        )
+    else:
+        source_docs = [file[:-4] for file in os.listdir(ANNUAL_REPORTS_DIR)]  # :-4 removes the file extension
 
-    args = parser.parse_args()
-    source_docs = source_docs[:args.subset] if args.subset else source_docs
+    source_docs = source_docs[: args.subset] if args.subset else source_docs
+
+    # Optional sampling
+    if args.sample:
+        logger.debug(f"Main path: {SAMPLED_DOCS_PATH}")
+        source_docs = get_sample_docs(
+            sampled_docs_path=SAMPLED_DOCS_PATH,
+            seeds_path=SEEDS_PATH,
+            source_docs=source_docs,
+            n_samples=N_SAMPLES,
+            sample_k=SAMPLE_K_DOCS,
+        )
+
     logger.info(f"Running process on {len(source_docs)} annual reports.")
     logger.debug(f"Source documents: {source_docs}")
 
