@@ -39,6 +39,7 @@ def plot_scores(
             estimator=np.mean,
             errorbar="sd",
             ax=ax,
+            palette="husl",
         )
 
         # Average for 'random_summary'
