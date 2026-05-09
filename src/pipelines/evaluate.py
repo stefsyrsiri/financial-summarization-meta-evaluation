@@ -18,13 +18,13 @@ N_WORKERS = TOTAL_CPU_CORES // 2
 def _process_doc_cpu(doc, gold_summaries_dir, candidate_summaries_dir, results_path):
     logger.info(f"Starting CPU-bound evaluation for {doc}")
     evaluator = SummaryEvaluator(
-        source_docs=[doc],
-        gold_dir=gold_summaries_dir,
-        candidate_dir=candidate_summaries_dir,
-        results_path=results_path
+        source_docs=[doc], gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, results_path=results_path
     )
-    evaluator.evaluate_summaries(source_file=doc)
-    logger.info(f"Finished CPU-bound evaluation for {doc}")
+    if doc not in evaluator._evaluated_docs_cpu:
+        evaluator.evaluate_summaries(source_file=doc)
+        logger.info(f"Finished CPU-bound evaluation for {doc}")
+    else:
+        logger.info(f"Skipping {doc} as it has already been evaluated.")
 
 
 def run_cpu_metrics(source_docs, gold_summaries_dir, candidate_summaries_dir, results_path, n_workers=N_WORKERS):
@@ -53,9 +53,10 @@ def run_gpu_metrics(
         candidate_dir=candidate_summaries_dir,
         results_path=results_path,
     )
-    for doc in tqdm(source_docs, desc="Processing documents"):
-        evaluator.evaluate_summaries_gpu_batch(source_file=doc, batch_size=batch_size, no_refs=no_refs)
-        logger.info(f"Finished GPU-bound evaluation for {doc}")
+        for doc in tqdm(source_docs, desc="Processing documents"):
+            if doc not in evaluator._evaluated_docs_gpu:
+                evaluator.evaluate_summaries_gpu_batch(source_file=doc, batch_size=batch_size, no_refs=no_refs)
+                logger.info(f"Finished GPU-bound evaluation for {doc}")
 
 
 def evaluate_summaries(

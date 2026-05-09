@@ -45,6 +45,11 @@ class SummaryEvaluator:
         self.checkpoint_file_gpu = self.results_path + "_checkpoint_gpu.txt"
         self._evaluated_docs_cpu = load_checkpoint(self.checkpoint_file_cpu)
         self._evaluated_docs_gpu = load_checkpoint(self.checkpoint_file_gpu)
+        self.source_docs = [
+            doc
+            for doc in self.source_docs
+            if doc not in self._evaluated_docs_cpu and doc not in self._evaluated_docs_gpu
+        ]
 
         logger.info(
             f"SummaryEvaluator initialized. Evaluation metrics: {self.metrics.keys()}. "
@@ -189,7 +194,8 @@ class SummaryEvaluator:
             return
 
         if source_file == self.source_docs[-1] and os.path.exists(self.checkpoint_file_cpu):
-                os.remove(self.checkpoint_file_cpu)
+            os.remove(self.checkpoint_file_cpu)
+            os.remove(self.checkpoint_file_gpu)
 
         logger.info(f"Summary evaluation completed for document {source_file}.")
 
@@ -342,5 +348,12 @@ class SummaryEvaluator:
             return
 
         if source_file == self.source_docs[-1] and os.path.exists(self.checkpoint_file_gpu):
+            os.remove(self.checkpoint_file_cpu)
+            os.remove(self.checkpoint_file_gpu)
+        logger.info(f"Summary evaluation completed for document {source_file}.")
+
+
+        if source_file == self.source_docs[-1] and os.path.exists(self.checkpoint_file_gpu):
+            os.remove(self.checkpoint_file_cpu)
             os.remove(self.checkpoint_file_gpu)
         logger.info(f"Summary evaluation completed for document {source_file}.")
