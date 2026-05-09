@@ -1,19 +1,16 @@
-from typing import List
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from IPython.display import display, HTML
 
 
 def plot_scores(
-        dfs: List[pd.DataFrame],
-        title: str,
-        noise_variant: str,
-        languages: List[str] = ["English", "Greek", "Spanish"],
-        hue: str = "eval_method"
-        ):
+    dfs: list[pd.DataFrame],
+    title: str,
+    noise_variant: str,
+    languages: list[str] = ["English", "Greek", "Spanish"],
+    hue: str = "eval_method",
+):
     """
     Plot the scores for different languages and noise percentages.
 
@@ -27,7 +24,6 @@ def plot_scores(
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
 
     for ax, df, lang in zip(axes, dfs, languages):
-
         # Base lineplot for source and noise variant
         sns.lineplot(
             data=df[(df["variant_type"] == noise_variant) | (df["variant_type"] == "source")],
@@ -37,7 +33,7 @@ def plot_scores(
             linewidth=2,
             estimator=np.mean,
             errorbar="sd",
-            ax=ax
+            ax=ax,
         )
 
         # Average for 'random_summary'
@@ -46,95 +42,85 @@ def plot_scores(
             y=random_summary_mean,
             linestyle="--",
             color="gray",
-            label="AVG Random Summary Score"
+            label="AVG Random Summary Score",
         )
 
         ax.set_title(f"{lang}")
-        ax.set_xlabel("noise percentage")
-        ax.set_ylabel("average score" if lang == "English" else "")
+        ax.set_xlabel("Noise Percentage")
+        ax.set_ylabel("AVG Evaluation Score")
         ax.set_ylim(0, 1.05)
         ax.set_yticks(np.arange(0.0, 1.1, step=0.1))
         ax.legend()
 
-    fig.suptitle(title, fontsize=16)
+    fig.suptitle(title, fontsize=16, y=0.95)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
 
-def plot_scores_dist(df, noise_variant, title, x='language', y='score', hue='eval_method'):
+def plot_scores_dist(df, noise_variant, title, x="language", y="score", hue="eval_method"):
     plt.figure(figsize=(15, 7))
-    sns.boxplot(data=df[df['variant_type'] == noise_variant], x=x, y=y, hue=hue)
+    sns.boxplot(data=df[df["variant_type"] == noise_variant], x=x, y=y, hue=hue)
     plt.title(title)
     plt.ylabel(y)
     plt.show()
 
 
 def t_corr(df, lang, noise_variant, lang_specific=False):
-    vmin = df[['pearson', 'spearman', 'kendall']].min().min()
-    vmax = df[['pearson', 'spearman', 'kendall']].max().max()
+    vmin = df[["pearson", "spearman", "kendall"]].min().min()
+    vmax = df[["pearson", "spearman", "kendall"]].max().max()
 
     if lang_specific:
-        method_filter = df['eval_method'].isin(['BARTScore', 'Bleurt'])
+        method_filter = df["eval_method"].isin(["BARTScore", "BLEURT"])
     else:
-        method_filter = ~df['eval_method'].isin(['BARTScore', 'Bleurt'])
+        method_filter = ~df["eval_method"].isin(["BARTScore", "BLEURT"])
 
-    return df[
-        (df['language'] == lang)
-        & (df['variant_type'] == noise_variant)
-        & method_filter
-        ].drop(columns=['language', 'variant_type']).style.set_caption(lang.title()+' - '+noise_variant).background_gradient(cmap='coolwarm_r', vmin=vmin, vmax=vmax).hide(axis='index')
+    return (
+        df[(df["language"] == lang) & (df["variant_type"] == noise_variant) & method_filter]
+        .drop(columns=["language", "variant_type"])
+        .style.set_caption(lang.title() + " - " + noise_variant)
+        .background_gradient(cmap="coolwarm_r", vmin=vmin, vmax=vmax)
+        .hide(axis="index")
+    )
 
 
-def t_corr_all(df, noise_variant, index_cols=['eval_type', 'eval_method']):
+def t_corr_all(df, noise_variant, index_cols=["eval_type", "eval_method"]):
     # English
     en = (
-        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'English')].iloc[:, 2:]
-        .rename(columns={'spearman': 'English', 'p_value': 'English_p'})
+        df.loc[(df["variant_type"] == noise_variant) & (df["language"] == "English")]
+        .iloc[:, 2:]
+        .rename(columns={"spearman": "English", "p_value": "English_p"})
     )
     # Greek
     el = (
-        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Greek')]
+        df.loc[(df["variant_type"] == noise_variant) & (df["language"] == "Greek")]
         .iloc[:, 2:]
-        .rename(columns={'spearman': 'Greek', 'p_value': 'Greek_p'})
+        .rename(columns={"spearman": "Greek", "p_value": "Greek_p"})
     )
     # Spanish
     es = (
-        df.loc[(df['variant_type'] == noise_variant) & (df['language'] == 'Spanish')]
+        df.loc[(df["variant_type"] == noise_variant) & (df["language"] == "Spanish")]
         .iloc[:, 2:]
-        .rename(columns={'spearman': 'Spanish', 'p_value': 'Spanish_p'})
+        .rename(columns={"spearman": "Spanish", "p_value": "Spanish_p"})
     )
-    merged = en.merge(el, on=index_cols, how='left').merge(es, on=index_cols, how='left')
-    return merged.rename(columns={'eval_type': 'evaluation type', 'eval_method': 'evaluation method'})
+    merged = en.merge(el, on=index_cols, how="left").merge(es, on=index_cols, how="left")
+    return merged.rename(columns={"eval_type": "evaluation type", "eval_method": "evaluation method"})
 
 
 def t_corr_all_formatted(
-    df, noise_variant,
+    df,
+    noise_variant,
     cmap="coolwarm_r",
-    subset=['English', 'Greek', 'Spanish'],
-    index_cols=['eval_type', 'eval_method']
+    subset=["English", "Greek", "Spanish"],
+    index_cols=["eval_type", "eval_method"],
 ):
     return (
         t_corr_all(df=df, noise_variant=noise_variant, index_cols=index_cols)
-        .style
-        .background_gradient(cmap=cmap, subset=subset)
-        .format({col: '{:.2f}' for col in subset + ['English_p','Greek_p','Spanish_p']})
+        .style.background_gradient(cmap=cmap, subset=subset)
+        .format({col: "{:.2f}" for col in subset + ["English_p", "Greek_p", "Spanish_p"]})
     )
 
 
-
-def t_corr_all_html(df, noise_variant):
-
-    styled = [t_corr(df, lang=lang, noise_variant=noise_variant) for lang in ['English', 'Greek', 'Spanish']]
-
-    html = '<div style="display: flex;">'
-    for s in styled:
-        html += f'<div>{s.to_html()}</div>'
-    html += '</div>'
-
-    display(HTML(html))
-
-
-def save_table(df, noise_variant):
+def save_table(df, noise_variant, file_name=None):
     t_corr_all(df=df, noise_variant=noise_variant).to_latex(
         buf=f"../tables/{noise_variant}.tex",
         na_rep="N/A",

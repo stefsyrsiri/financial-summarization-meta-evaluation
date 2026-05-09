@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Dict
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -15,9 +15,9 @@ FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 
 # TODO: Load cpu or gpu metrics based on the CLI command
 def load_metrics(
-        lang: str,
-        cfg_path: str=os.getenv("EVALUATION_CONFIG_PATH", "src/conf/config.yaml")
-        ) -> Dict:
+    lang: str,
+    cfg_path: str = os.getenv("EVALUATION_CONFIG_PATH", "src/conf/config.yaml"),
+) -> dict:
     try:
         with open(cfg_path) as f:
             cfg = yaml.safe_load(f)
@@ -31,7 +31,7 @@ def load_metrics(
     for name, enabled in cfg_metrics.items():
         # Return metrics that are enabled
         if not enabled:
-            continue # skip disabled metrics
+            continue  # skip disabled metrics
 
         properties = METRICS[name]
 

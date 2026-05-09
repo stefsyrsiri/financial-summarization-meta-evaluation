@@ -16,13 +16,7 @@ FILE_EXTENSION = os.getenv("FILE_EXTENSION")
 
 
 class SummaryGenerator:
-    def __init__(
-            self,
-            source_docs: list,
-            gold_dir: str,
-            candidate_dir: str,
-            truncate_for_bert: bool
-            ):
+    def __init__(self, source_docs: list, gold_dir: str, candidate_dir: str, truncate_for_bert: bool):
         """Constructs candidate summaries.
 
         Args:
@@ -36,12 +30,7 @@ class SummaryGenerator:
         self.candidate_dir = candidate_dir
         self.truncate_for_bert = truncate_for_bert
 
-    def generate_noisy_summaries(
-            self,
-            doc_id: str,
-            corruptor: SummaryCorruptor,
-            noise_percentage: float
-            ):
+    def generate_noisy_summaries(self, doc_id: str, corruptor: SummaryCorruptor, noise_percentage: float):
         """Generates noisy summaries for a given document.
 
         Args:
@@ -57,8 +46,10 @@ class SummaryGenerator:
                 f"consecutively_swapped_words_{noise_percentage}": corruptor.consecutive_swap_words(),
                 f"deleted_words_{noise_percentage}": corruptor.remove_words(),
                 f"removed_sentence_{noise_percentage}": corruptor.remove_sentence(),
-                f"inserted_sentence_{noise_percentage}": corruptor.insert_sentence(target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir),
-                f"repeated_sentence_{noise_percentage}": corruptor.repeat_sentence()
+                f"inserted_sentence_{noise_percentage}": corruptor.insert_sentence(
+                    target=doc_id, source_docs=self.source_docs, gold_dir=self.gold_dir
+                ),
+                f"repeated_sentence_{noise_percentage}": corruptor.repeat_sentence(),
             }
 
             for summary_type, summary_content in noisy_summaries.items():

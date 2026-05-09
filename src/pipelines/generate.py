@@ -8,7 +8,9 @@ from modules.summary_corruptor import SummaryCorruptor
 from modules.summary_generator import SummaryGenerator
 
 
-def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summaries_dir, summary_ver, file_extension, truncate_for_bert):
+def generate_noisy_summaries(
+    source_docs, gold_summaries_dir, candidate_summaries_dir, summary_ver, file_extension, truncate_for_bert
+):
     """Generate noisy summaries from the gold summaries.
 
     Args:
@@ -24,7 +26,12 @@ def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summarie
     if not os.path.isdir(candidate_summaries_dir):
         os.makedirs(candidate_summaries_dir, exist_ok=True)
 
-    summary_generator = SummaryGenerator(source_docs=source_docs, gold_dir=gold_summaries_dir, candidate_dir=candidate_summaries_dir, truncate_for_bert=truncate_for_bert)
+    summary_generator = SummaryGenerator(
+        source_docs=source_docs,
+        gold_dir=gold_summaries_dir,
+        candidate_dir=candidate_summaries_dir,
+        truncate_for_bert=truncate_for_bert,
+    )
 
     for doc in tqdm(source_docs, desc="Processing documents"):
         logger.info(f"Processing annual report '{doc}' for noisy summary generation.")
@@ -39,7 +46,9 @@ def generate_noisy_summaries(source_docs, gold_summaries_dir, candidate_summarie
 
         # Summary Destruction
         try:
-            corruptor = SummaryCorruptor(input_summary=gold_summary, noise_percentage=0.9, truncate_for_bert=truncate_for_bert)
+            corruptor = SummaryCorruptor(
+                input_summary=gold_summary, noise_percentage=0.9, truncate_for_bert=truncate_for_bert
+            )
 
             # Summary Generation
             percentages = np.round(np.linspace(0.9, 0.1, num=5), 1).tolist()
