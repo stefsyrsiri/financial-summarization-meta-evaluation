@@ -39,10 +39,12 @@ from src.pipelines.generate import generate_gold_summaries, generate_noisy_summa
 from src.pipelines.evaluate import evaluate_summaries
 from src.utils.sampling import get_sample_docs
 
+from src.registries.languages_registry import LANGUAGES
 
 
 load_dotenv(override=True)
 LANGUAGE = os.getenv("LANGUAGE")
+LANGUAGE_CODE = LANGUAGES[LANGUAGE].code
 ANNUAL_REPORTS_DIR = os.getenv("ANNUAL_REPORTS_DIR")
 GOLD_SUMMARIES_DIR = os.getenv("GOLD_SUMMARIES_DIR")
 EXTRACTED_SUMMARIES_DIR = os.getenv("EXTRACTED_SUMMARIES_DIR")
