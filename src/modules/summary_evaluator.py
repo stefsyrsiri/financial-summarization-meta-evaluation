@@ -94,7 +94,7 @@ class SummaryEvaluator:
                                 data,
                                 source_file=source_file,
                                 type="N-gram-based",
-                                method="Rouge1",
+                                method="ROUGE-1",
                                 candidate_variant=candidate_variant,
                                 result=rouge1_result,
                                 duration=duration,
@@ -111,7 +111,7 @@ class SummaryEvaluator:
                                 data,
                                 source_file=source_file,
                                 type="N-gram-based",
-                                method="Rouge2",
+                                method="ROUGE-2",
                                 candidate_variant=candidate_variant,
                                 result=rouge2_result,
                                 duration=duration,
@@ -238,7 +238,7 @@ class SummaryEvaluator:
                         append_score(
                             data,
                             source_file=source_file,
-                            type="Model-based",
+                            type="NLI",
                             method="LongDocFACTScore",
                             candidate_variant=variant,
                             result=float(score),
@@ -272,8 +272,8 @@ class SummaryEvaluator:
                         append_score(
                             data,
                             source_file=source_file,
-                            type="Model-based",
-                            method="Bleurt",
+                            type="NLI",
+                            method="BLEURT",
                             candidate_variant=variant,
                             result=score,
                             duration=duration / len(batch),
@@ -313,7 +313,7 @@ class SummaryEvaluator:
                             append_score(
                                 data,
                                 source_file=source_file,
-                                type="Model-based",
+                                type="NLI",
                                 method="FactCC",
                                 candidate_variant=variant,
                                 result=prob,
@@ -413,10 +413,10 @@ class SummaryEvaluator:
                         append_score(
                             data,
                             source_file=source_file,
-                            type="Model-based",
+                            type="NLI",
                             method="FinSumEval-faithfulness",
                             candidate_variant=candidate_file,
-                            result=float(finsumeval_score["score"]),
+                            result=float(finsumeval_score.score),
                             duration=duration,
                         )
 
@@ -428,7 +428,7 @@ class SummaryEvaluator:
                         append_score(
                             data,
                             source_file=source_file,
-                            type="Model-based",
+                            type="Embeddings-based",
                             method="FinSumEval-conciseness",
                             candidate_variant=candidate_file,
                             result=float(finsumeval_score["score"]),
