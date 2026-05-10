@@ -29,7 +29,7 @@ from transformers.utils import logging as hf_logging
 hf_logging.set_verbosity_error()  # Huggingface warnings
 
 from evaluation_methods.FinSumEval.metric.extractors.ngram import NgramExtractor
-from evaluation_methods.FinSumEval.metric.tokenizers.tokenizer import Tokenizer as ExtractorTokenizer
+from evaluation_methods.FinSumEval.metric.tokenizers.tokenizer import SpacyTokenizer
 
 from src.modules.data_collector import DataCollector
 from src.modules.stats_extractor import StatsExtractor
@@ -181,7 +181,7 @@ def main():
         )
 
     if args.ngram_extract:
-        tokenizer = ExtractorTokenizer(LANGUAGE_CODE)
+        tokenizer = SpacyTokenizer(LANGUAGE_CODE)
         extractor = NgramExtractor(tokenizer)
         generate_gold_summaries(
             source_docs=source_docs,
